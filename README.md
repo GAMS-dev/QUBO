@@ -1,93 +1,66 @@
-# QUBO
+# QUBO Reformulation
+
+Following are some examples included to test the qubo reformulation.
+
+1. setPacking.gms, Set Packing Problem (max)
+2. O1program.gms, General 0/1 Problem (max)
+3. QAP.gms, Quadratic Assignment Problem (min)
+4. setPartition.gms, Set Partitioning Problem (min)
+5. QKP.gms, Quadratic Knapsack Problem (max)
+6. generalIP.gms, a general integer problem (max)
+7. qplib_5881.gms, a flat/scalar gms file (max)
+8. knights.gms, A Max problem from GAMS modlib
 
 
+## Required Packages
 
-## Getting started
+1. gamsapi[transfer], [link](https://www.gams.com/latest/docs/API_PY_GETTING_STARTED.html#PY_PIP_INSTALL_BDIST)
+2. dwave-system, required when solving on [Dwave's](https://docs.ocean.dwavesys.com/projects/system/en/latest/installation.html) Hybrid QPU
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+Note: Generating the API key and setting up the Python-Dwave Environment is considered to be available.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
 
-## Add your files
+## Input
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+Once the problem is defined, it can be solved thru the qubo reformulation by including the `qubo_solve.gms` using $batinclude followed by 5 necessary arguments. These arguments must be in the exact order as mentioned below.
 
-```
-cd existing_repo
-git remote add origin https://git.gams.com/vjha/qubo.git
-git branch -M main
-git push -uf origin main
-```
+1. modelName
+2. modelType
+3. objective (max/min)
+4. objectiveVariable
+5. Penalty factor for the constraints
 
-## Integrate with your tools
+The problem can also be solved on a QPU from Dwave. Following are some optional arguments when the chosen method is `qpu`. The arguments must be passed in the same order. Since these are positional arguments, therefore, if the 8th argument that needs to be set, then arguments 6 & 7 can be skipped by using ''. This will keep them at their respective default.
 
-- [ ] [Set up project integrations](https://git.gams.com/vjha/qubo/-/settings/integrations)
+6. method, [qpu, classic] (default: classic)
+7. solver, choice of miqcp solver (default: cplex | effective only if `method=classic`).
+8. max_iter, Number of times the problem is solved on the QPU (default: 1 | effective only if `method=qpu`)
+9. timeLimit, Time limit for 1 iteration on QPU or TimeLimit for a classical solve (default: 10)
+10. num_threads, Number of threads to be used in case of a classical solve (default: 1 | effective only if method=classic`)
+11. log_on, Creates a log for the reformulation [0, 1, 2] (default: 0, don't create a log)
+12. examiner_on, [0, 1] (default: 0) The quality of returned qubo solution w.r.t the original problem can be checked through the use of `examiner` [tool](https://www.gams.com/latest/docs/S_EXAMINER.html).
 
-## Collaborate with your team
+## Output
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+The script generates two gdx files. One for the standard problem which is saved as `modelName.gdx` and another for the reformulted model, saved as `qout_modeName.gdx`. A successful run will then return the level of binary variables and the objective variable.
 
-## Test and Deploy
+## Limitations
 
-Use the built-in continuous integration in GitLab.
+Note: In order to binarize the right hand side of each constraint, the reformulation needs to generate slack variables depending on the RHS. The number of binary variables to be generated for a number $x$ is $2^n$ where n = $log_2(x)$. This with the fact that there can be many constraints, can make the reformulation computationally challenging.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+1. The reformulation does not work with continuous variables with the exception of the free objective variable.
+2. When binarizing integer variables they must have an upper bound less than or equal to 1e4.
+3. The coefficients for the variables in the constraints must be integers.
+4. The use of quadratic terms is limited to binary variables where levels are not equal to 1.
+5. Although the objective function can have quadratic terms, the constraints cannot have any quadratic terms. This is due to the penalization step. The step requires the constraint to be squared which results in a polynomial of degree greater than 2. This becomes a problem with 3 or more interacting variables. For example, $(xy + yz)^2 = (xy)^2 + (yz)^2 + 2xy^2z$. Here, the term $2xy^2z$ is problematic since it cannot be reduced to bilinear terms.
+6. The reformulation expects the objective function to be defined via the use of a scalar equation, i.e., the symbol `iobj` must be nonzero in the gdx file created by [Convert](https://www.gams.com/latest/docs/S_CONVERT.html).
 
-***
+The reformulation will throw appropriate exceptions if the limitations are not statisfied.
 
-# Editing this README
+## Testing
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+The file `test_qubo_solve.gms` tests the correctness of qubo_solve in certain scenarios. The test file should be in the same location as `qubo_solve.gms`. There is a test for checking the correctness of the reformulation and solution obtained from the Dwave QPU. This is not enabled by default. In order to enable this test one should run the file with the command line option `--TESTDWAVE=yes`. It follows that the required python packages are already present in the python environment defined by `GMSPYTHONLIB`.
 
-## Suggestions for a good README
+## Choosing the right Penalty
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+A penalty value that is too large can impede the solution process as the penalty terms overwhelm the original objective function information, making it difficult to distinguish the quality of one solution from another. On the other hand, a penalty value that is too small jeopardizes the search for feasible solutions. Generally, there is a ‘Goldilocks region’ of considerable size that contains penalty values that work well. A little preliminary thought about the model can yield a ballpark estimate of the original objective function value. Taking P to be some percentage (75% to 150%) of this estimate is often a good place to start. In the end, solutions generated can always be checked for feasibility, leading to changes in penalties and further rounds of the solution process as needed to zero in on an acceptable solution.
