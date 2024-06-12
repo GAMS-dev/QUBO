@@ -133,7 +133,7 @@ logging.debug("Coefficient matrix: raw_a\n"+raw_a.to_string())
 logging.debug("\nEquation Data: eq_data\n"+eq_data.to_string())
 logging.debug("\nVariable Data: all_var_vals\n"+all_var_vals.to_string())
 
-def varContribution(A, vars, cons=slice(None)):
+def var_contribution(A, vars, cons=slice(None)):
     """
     helper function to calculate the contribution of given variables
     in a constraint or set of constraints
@@ -155,14 +155,14 @@ def varContribution(A, vars, cons=slice(None)):
 
 if fixed_and_lower_bounds: # adjust the rhs of equations when level of variables > 0
     logging.info(f"\nList of variables with lower bounds:\n{vars_with_lower_bounds}")
-    contribution = varContribution(raw_a, fixed_and_lower_bounds)
+    contribution = var_contribution(raw_a, fixed_and_lower_bounds)
     eq_data.loc[:,['lower', 'upper']] -= contribution
     if fixed_vars:
         logging.info(f"\nList of Fixed Variables:\n{fixed_vars}")
         # remove the fixed variables from computation
         bin_vars = [var for var in bin_vars if var not in fixed_vars.keys()]
         int_vars = [var for var in int_vars if var not in fixed_vars.keys()]
-        sum_fixed_obj_var_coeffs += np.ndarray.item(varContribution(raw_a, fixed_vars, cons=obj_eq_name))
+        sum_fixed_obj_var_coeffs += np.ndarray.item(var_contribution(raw_a, fixed_vars, cons=obj_eq_name))
         raw_a.drop(fixed_vars, axis=1, inplace=True) # dropping columns from the coefficient matrix
         fixed_var_vals = all_var_vals[all_var_vals['j'].isin(fixed_vars)].copy(deep=True)
 
@@ -180,7 +180,7 @@ if len(redundant_cons) > 0:
     eq_data.drop(eq_data[eq_data['i'].isin(redundant_cons)].index, axis=0, inplace=True)
 
 
-def genslacks(var_range):
+def gen_slacks(var_range):
     """
     helper function to generate slacks depending on the range of variables or rhs
 
@@ -191,7 +191,7 @@ def genslacks(var_range):
         Numpy array containing slack co-efficients
 
     example: 
-        if var_range=5, then genslacks(5) returns [1, 2, 2]
+        if var_range=5, then gen_slacks(5) returns [1, 2, 2]
     """
     if var_range >= 1e+4:
         raise Exception("The Upper bound is greater than or equal to 1e+4, Quitting!")
@@ -210,10 +210,10 @@ If these variables contribute to the objective function, their lower bounds are 
 sum_lower_bound_of_int_vars = 0
 if len(int_vars) != 0:
     if vars_with_lower_bounds:
-        sum_lower_bound_of_int_vars += np.ndarray.item(varContribution(raw_a, vars_with_lower_bounds, obj_eq_name))
+        sum_lower_bound_of_int_vars += np.ndarray.item(var_contribution(raw_a, vars_with_lower_bounds, obj_eq_name))
 
     int_var_vals = all_var_vals[all_var_vals['j'].isin(int_vars)]
-    int_to_bin_bounds = {row['j']: genslacks(row['upper']-row['lower']) for _,row in int_var_vals.iterrows()} # generate coeffs for converted binary vars
+    int_to_bin_bounds = {row['j']: gen_slacks(row['upper']-row['lower']) for _,row in int_var_vals.iterrows()} # generate coeffs for converted binary vars
     int_bin_vals = pd.DataFrame(columns=['intName', 'binName', 'value'])
     for var, bin_bounds in int_to_bin_bounds.items():
         for i in range(len(bin_bounds)): # naming the converted binary vars
@@ -320,7 +320,7 @@ A_coeff = raw_a.loc[cons['i'], bin_vars]
 
 quad = None
 
-def fetchQuadraticCoeff(rawdf):
+def fetch_quadratic_coeff(rawdf):
     """
     helper function to convert the original Q matrix of the problem to a symmetric matrix
 
@@ -349,7 +349,7 @@ if check_quad is not None: # check if quadratic terms are present in the origina
     rawquad_obj = rawquad[rawquad['i_0'].isin(obj_eq_name)].copy(deep=True)
     if len(rawquad_obj.index) != 0:  # check if quadratic terms exist in the objective function
         rawquad_obj.drop(['i_0'],axis=1,inplace=True)
-        quad = fetchQuadraticCoeff(rawdf=rawquad_obj)
+        quad = fetch_quadratic_coeff(rawdf=rawquad_obj)
         sum_fixed_obj_var_coeffs /= 2
     
     rawquad_cons = rawquad[-rawquad['i_0'].isin(obj_eq_name)] # non-linear constraints without objective equation
@@ -384,7 +384,7 @@ def modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks):
     Args:   
         b_vec: The n*1 vector 
         rhs : The Right hand side of a constraint
-        slacks: result of genslacks()
+        slacks: result of gen_slacks()
         A_coeff: "A" matrix
         ele: constraint
         nslacks: number of slacks
@@ -399,7 +399,7 @@ def modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks):
     nslacks += len(slacks)
     return np.append(b_vec, [rhs]), A_coeff, nslacks
 
-def getLhsBounds(ele):
+def get_lhs_bounds(ele):
     """
     helper function to find the bounds of a constraint
 
@@ -417,7 +417,7 @@ for _, ele in cons.iterrows():
 
     if ele.upper == ele.lower: # equal-to type constraint
         rhs = ele.lower
-        lhs_min_lb, lhs_max_ub = getLhsBounds(A_coeff.loc[ele.i])
+        lhs_min_lb, lhs_max_ub = get_lhs_bounds(A_coeff.loc[ele.i])
         if (rhs - lhs_min_lb) < 0 or (lhs_max_ub - rhs) < 0:
             raise Exception(f"Constraint is infeasible: {ele.i}")
         else:
@@ -426,10 +426,10 @@ for _, ele in cons.iterrows():
 
     elif ele.upper == np.inf: # greater than type constraint
         rhs = ele.lower
-        _, lhs_max_ub = getLhsBounds(A_coeff.loc[ele.i])
+        _, lhs_max_ub = get_lhs_bounds(A_coeff.loc[ele.i])
         slacks_range = lhs_max_ub - rhs
         if slacks_range > 0:
-            slacks = -1*genslacks(slacks_range)
+            slacks = -1*gen_slacks(slacks_range)
             b_vec, A_coeff, nslacks = modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks)
         elif slacks_range == 0:
             b_vec = np.append(b_vec, [rhs])
@@ -439,10 +439,10 @@ for _, ele in cons.iterrows():
 
     else: # less-than type constraint
         rhs = ele.upper
-        lhs_min_lb, _ = getLhsBounds(A_coeff.loc[ele.i])
+        lhs_min_lb, _ = get_lhs_bounds(A_coeff.loc[ele.i])
         slacks_range = rhs - lhs_min_lb
         if slacks_range > 0:
-            slacks = genslacks(slacks_range)
+            slacks = gen_slacks(slacks_range)
             b_vec, A_coeff, nslacks = modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks)
         elif slacks_range == 0:
             b_vec = np.append(b_vec, [rhs])
@@ -700,7 +700,7 @@ orig_syms_w_new_levels = optimized_vals[optimized_vals['i'].isin(rem_syms)].set_
 quad_contribution = x_l.T@quad@x_l if check_quad is not None else 0 #at the moment `quad` only contains contribution from the objective row.
 orig_jacobian = gdx_data['A'].records # A coefficients 
 orig_jacobian = orig_jacobian.pivot(index="i", columns="j", values="value").fillna(0) # arranging in a matrix
-linear_contribution = varContribution(orig_jacobian, orig_syms_w_new_levels, cons=obj_eq_name).flatten()[0]
+linear_contribution = var_contribution(orig_jacobian, orig_syms_w_new_levels, cons=obj_eq_name).flatten()[0]
 total_objective_contribution = linear_contribution + quad_contribution
 total_objective_contribution = -1*total_objective_contribution if obj_var_direction > 0 else total_objective_contribution    
 obj_var_coeff.loc[0, 'level'] = total_objective_contribution
