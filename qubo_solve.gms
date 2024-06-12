@@ -61,7 +61,6 @@ EmbeddedCode Python:
 import pandas as pd
 from gams import transfer as gt
 import numpy as np
-from math import log2, ceil
 import re
 import warnings
 import logging
