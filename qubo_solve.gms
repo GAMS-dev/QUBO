@@ -69,13 +69,13 @@ log_level_dict = {"0": logging.WARN, "1": logging.INFO, "2": logging.DEBUG}
 log_level = log_level_dict.get('%log_on%', logging.WARN)
 
 if log_level < 30:
-        logging.basicConfig(filename='%modelName%_reformulation.log', filemode='w', format='%(message)s', level=log_level, force=True)
+    logging.basicConfig(filename='%modelName%_reformulation.log', filemode='w', format='%(message)s', level=log_level, force=True)
 
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 is_max = "x" in "%direction%".lower()
-gdxFile = r"%modelName%.gdx"
-gdx_data = gt.Container(gdxFile)
+gdx_file = r"%modelName%.gdx"
+gdx_data = gt.Container(gdx_file)
 obj_eq_name = gdx_data['iobj'].records
 
 if obj_eq_name is None:
@@ -83,13 +83,13 @@ if obj_eq_name is None:
 
 obj_var = gdx_data['jobj'].records # fetch the objective variable name
 all_vars = gdx_data['j'].records # fetches all variable names
-rawA = gdx_data['A'].records # A coefficients 
+raw_a = gdx_data['A'].records # A coefficients 
 eq_data = gdx_data['e'].records # fetches equation data
 
-if rawA[-rawA['i'].isin(obj_eq_name['i'].tolist())]['value'].mod(1).sum(axis=0) > 0: # floating point coeffs in objective function is accepted
+if raw_a[-raw_a['i'].isin(obj_eq_name['i'].tolist())]['value'].mod(1).sum(axis=0) > 0: # floating point coeffs in objective function is accepted
     raise Exception("Reformulation with Non-Integer Coefficients not possible. Quitting.")
 
-rawA = rawA.pivot(index="i", columns="j", values="value").fillna(0) # arranging in a matrix
+raw_a = raw_a.pivot(index="i", columns="j", values="value").fillna(0) # arranging in a matrix
 
 if eq_data['lower'].mod(1).sum(axis=0) > 0 or eq_data['upper'].mod(1).sum(axis=0) > 0:
     raise Exception("Reformulation with Non-Integer RHS not possible. Quitting.")
@@ -106,7 +106,7 @@ if len(all_vars) - len(bin_vars) - len(int_vars) != 1: # Continuous variables ar
 
 obj_eq_name = obj_eq_name['i'].to_list()
 
-checkQuad = gdx_data['ANL'].records
+check_quad = gdx_data['ANL'].records
    
 """
 Check if there are any fixed variables in the gdx, i.e., lb=ub=level of any variable.
@@ -120,16 +120,16 @@ fixed_vars = {var.j: var.level for _, var in all_var_vals.iterrows() if (var.lev
 fixed_and_lower_bounds = {**vars_with_lower_bounds, **fixed_vars}
 sum_fixed_obj_var_coeffs = 0
 
-if checkQuad is not None:
+if check_quad is not None:
     rawquad = gdx_data['Q'].records # fetch quadratic terms from the original problem, if any.
 
     if len(int_vars) != 0:
         raise Exception("Quadratic Program with integer variables are not supported.")
 
-    if any(checkQuad['j'].isin(fixed_and_lower_bounds.keys())):
+    if any(check_quad['j'].isin(fixed_and_lower_bounds.keys())):
         raise Exception("Quadratic terms with non-zero variable levels are not supported at the moment.")
 
-logging.debug("Coefficient matrix: rawA\n"+rawA.to_string())
+logging.debug("Coefficient matrix: raw_a\n"+raw_a.to_string())
 logging.debug("\nEquation Data: eq_data\n"+eq_data.to_string())
 logging.debug("\nVariable Data: all_var_vals\n"+all_var_vals.to_string())
 
@@ -155,28 +155,28 @@ def varContribution(A, vars, cons=slice(None)):
 
 if fixed_and_lower_bounds: # adjust the rhs of equations when level of variables > 0
     logging.info(f"\nList of variables with lower bounds:\n{vars_with_lower_bounds}")
-    contribution = varContribution(rawA, fixed_and_lower_bounds)
+    contribution = varContribution(raw_a, fixed_and_lower_bounds)
     eq_data.loc[:,['lower', 'upper']] -= contribution
     if fixed_vars:
         logging.info(f"\nList of Fixed Variables:\n{fixed_vars}")
         # remove the fixed variables from computation
         bin_vars = [var for var in bin_vars if var not in fixed_vars.keys()]
         int_vars = [var for var in int_vars if var not in fixed_vars.keys()]
-        sum_fixed_obj_var_coeffs += np.ndarray.item(varContribution(rawA, fixed_vars, cons=obj_eq_name))
-        rawA.drop(fixed_vars, axis=1, inplace=True) # dropping columns from the coefficient matrix
+        sum_fixed_obj_var_coeffs += np.ndarray.item(varContribution(raw_a, fixed_vars, cons=obj_eq_name))
+        raw_a.drop(fixed_vars, axis=1, inplace=True) # dropping columns from the coefficient matrix
         fixed_var_vals = all_var_vals[all_var_vals['j'].isin(fixed_vars)].copy(deep=True)
 
-    logging.debug("\nAfter removing fixed variables and adjusting for non-zero levels: rawA\n"+rawA.to_string())
+    logging.debug("\nAfter removing fixed variables and adjusting for non-zero levels: raw_a\n"+raw_a.to_string())
     logging.debug("\nAfter removing fixed variables and adjusting for non-zero levels: eq_data\n"+eq_data.to_string())  
 
 """
 Check if there exist a row in coefficient matrix with all zero values. This can happen if all vars in a constraint are fixed.
 Such row is irrelevant for QUBO and can be dropped out of the matrix and set of constraints.
 """
-redundant_cons = list(rawA[rawA.apply(abs).sum(axis=1)==0].index)
+redundant_cons = list(raw_a[raw_a.apply(abs).sum(axis=1)==0].index)
 if len(redundant_cons) > 0:
     logging.info(f"\nDropping these redundant constraint: \n{redundant_cons}")
-    rawA.drop(redundant_cons, axis=0, inplace=True)
+    raw_a.drop(redundant_cons, axis=0, inplace=True)
     eq_data.drop(eq_data[eq_data['i'].isin(redundant_cons)].index, axis=0, inplace=True)
 
 
@@ -210,7 +210,7 @@ If these variables contribute to the objective function, their lower bounds are 
 sum_lower_bound_of_int_vars = 0
 if len(int_vars) != 0:
     if vars_with_lower_bounds:
-        sum_lower_bound_of_int_vars += np.ndarray.item(varContribution(rawA, vars_with_lower_bounds, obj_eq_name))
+        sum_lower_bound_of_int_vars += np.ndarray.item(varContribution(raw_a, vars_with_lower_bounds, obj_eq_name))
 
     int_var_vals = all_var_vals[all_var_vals['j'].isin(int_vars)]
     int_to_bin_bounds = {row['j']: genslacks(row['upper']-row['lower']) for _,row in int_var_vals.iterrows()} # generate coeffs for converted binary vars
@@ -227,18 +227,18 @@ if len(int_vars) != 0:
     int_bin_vals = int_bin_vals.reindex(labels=binName_list, axis='columns')
     # int_bin_vals.columns = pd.MultiIndex.from_tuples(int_bin_name_map)
 
-    rawA_int = rawA[int_vars]
-    rawA_int = rawA_int.dot(int_bin_vals) # updating the "A" coeff matrix with the new coeffs for converted binary vars
-    rawA_rest = rawA[obj_var+bin_vars]
-    rawA = pd.concat([rawA_rest, rawA_int], axis='columns') # new "A" coeff matrix
-    logging.info("\nInteger to Binary Mapping: rawA\n"+rawA.to_string())
+    raw_a_int = raw_a[int_vars]
+    raw_a_int = raw_a_int.dot(int_bin_vals) # updating the "A" coeff matrix with the new coeffs for converted binary vars
+    raw_a_rest = raw_a[obj_var+bin_vars]
+    raw_a = pd.concat([raw_a_rest, raw_a_int], axis='columns') # new "A" coeff matrix
+    logging.info("\nInteger to Binary Mapping: raw_a\n"+raw_a.to_string())
     bin_vars += binName_list # append the list of original binary variables with the list of converted binary variables 
 
 cons = eq_data[-eq_data['i'].isin(obj_eq_name)].reset_index(drop=True) # fetch only the constrainsts and not the objective equation
 nvars = len(bin_vars)
 nslacks = 0
-obj_var_direction = rawA[obj_var].loc[obj_eq_name].to_numpy()
-obj_var_coeff = rawA[bin_vars].loc[obj_eq_name].to_numpy()
+obj_var_direction = raw_a[obj_var].loc[obj_eq_name].to_numpy()
+obj_var_coeff = raw_a[bin_vars].loc[obj_eq_name].to_numpy()
 if obj_var_direction > 0:
     obj_var_coeff = -1*obj_var_coeff
 obj = np.zeros((nvars, nvars))
@@ -267,7 +267,7 @@ def check_row_entries(df):
 # Case 1 implementation
 special_cons_case_1_lable = [ele.i for _, ele in cons.iterrows() if ele.upper == 1 and ele.lower != 1]
 if special_cons_case_1_lable:
-    case1_cons = rawA[bin_vars].loc[special_cons_case_1_lable]
+    case1_cons = raw_a[bin_vars].loc[special_cons_case_1_lable]
     case1_cons = check_row_entries(case1_cons.copy())
     case1_cons_index_lable = list(case1_cons.index)
     case1_penalty = case1_cons.to_numpy()
@@ -284,7 +284,7 @@ else:
 # Case 2 implementation
 special_cons_case_2_lable = [ele.i for _, ele in cons.iterrows() if ele.lower == 1 and ele.upper != 1]
 if special_cons_case_2_lable:
-    case2_cons = rawA[bin_vars].loc[special_cons_case_2_lable]
+    case2_cons = raw_a[bin_vars].loc[special_cons_case_2_lable]
     case2_cons = check_row_entries(case2_cons.copy())
     case2_cons = case2_cons[case2_cons.sum(axis=1)==2]
     case2_cons_index_lable = list(case2_cons.index)
@@ -314,9 +314,9 @@ else:
     obj = P_qpu*final_special_penalty - obj if is_max else P_qpu*final_special_penalty + obj # Here, we update the obj and fix the direction to always Minimize for 'qpu'
 
 cons.drop(cons[cons["i"].isin(final_special_cons)].index, axis=0, inplace=True)
-rawA.drop(final_special_cons, axis=0, inplace=True)
+raw_a.drop(final_special_cons, axis=0, inplace=True)
 
-A_coeff = rawA.loc[cons['i'], bin_vars]
+A_coeff = raw_a.loc[cons['i'], bin_vars]
 
 quad = None
 
@@ -344,7 +344,7 @@ def fetchQuadraticCoeff(rawdf):
     return quad.to_numpy()
     
 
-if checkQuad is not None: # check if quadratic terms are present in the original problem
+if check_quad is not None: # check if quadratic terms are present in the original problem
     logging.debug("\nRaw Q data from GDX: Q\n"+rawquad.to_string())
     rawquad_obj = rawquad[rawquad['i_0'].isin(obj_eq_name)].copy(deep=True)
     if len(rawquad_obj.index) != 0:  # check if quadratic terms exist in the objective function
@@ -377,12 +377,12 @@ if quad is not None: # add the old quadratic terms/matrix to the new objective
     logging.debug("\nNew Q: \n"+np.array2string(obj))
 
 
-def modify_matrix(Bvec, rhs, slacks, A_coeff, ele, nslacks):
+def modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks):
     """
     helper function to update the original "A" matrix of coeffs
 
     Args:   
-        Bvec: The n*1 vector 
+        b_vec: The n*1 vector 
         rhs : The Right hand side of a constraint
         slacks: result of genslacks()
         A_coeff: "A" matrix
@@ -390,14 +390,14 @@ def modify_matrix(Bvec, rhs, slacks, A_coeff, ele, nslacks):
         nslacks: number of slacks
 
     Returns: 
-        updated Bvec, A_coeff and number of slacks 
+        updated b_vec, A_coeff and number of slacks 
     """
     con_index = ele.i
     slack_names = [f'slack_{con_index}_{i}' for i in range(nslacks+1, nslacks + len(slacks) + 1)]
     A_coeff[slack_names] = 0
     A_coeff.loc[con_index, slack_names] = slacks
     nslacks += len(slacks)
-    return np.append(Bvec, [rhs]), A_coeff, nslacks
+    return np.append(b_vec, [rhs]), A_coeff, nslacks
 
 def getLhsBounds(ele):
     """
@@ -411,8 +411,8 @@ def getLhsBounds(ele):
     """
     return ele[ele < 0].sum(), ele[ele > 0].sum()
 
-Bvec = np.array([])
-logging.info(f"\nFinal Cons: \n"+cons.to_string())
+b_vec = np.array([])
+logging.info("\nFinal Cons: \n"+cons.to_string())
 for _, ele in cons.iterrows():
 
     if ele.upper == ele.lower: # equal-to type constraint
@@ -421,7 +421,7 @@ for _, ele in cons.iterrows():
         if (rhs - lhs_min_lb) < 0 or (lhs_max_ub - rhs) < 0:
             raise Exception(f"Constraint is infeasible: {ele.i}")
         else:
-            Bvec = np.append(Bvec, [rhs])
+            b_vec = np.append(b_vec, [rhs])
             slacks = [] # do not introduce slacks for equality type constraints
 
     elif ele.upper == np.inf: # greater than type constraint
@@ -430,9 +430,9 @@ for _, ele in cons.iterrows():
         slacks_range = lhs_max_ub - rhs
         if slacks_range > 0:
             slacks = -1*genslacks(slacks_range)
-            Bvec, A_coeff, nslacks = modify_matrix(Bvec, rhs, slacks, A_coeff, ele, nslacks)
+            b_vec, A_coeff, nslacks = modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks)
         elif slacks_range == 0:
-            Bvec = np.append(Bvec, [rhs])
+            b_vec = np.append(b_vec, [rhs])
             slacks = []
         else:
             raise Exception(f"Constraint is infeasible: {ele.i}")
@@ -443,9 +443,9 @@ for _, ele in cons.iterrows():
         slacks_range = rhs - lhs_min_lb
         if slacks_range > 0:
             slacks = genslacks(slacks_range)
-            Bvec, A_coeff, nslacks = modify_matrix(Bvec, rhs, slacks, A_coeff, ele, nslacks)
+            b_vec, A_coeff, nslacks = modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks)
         elif slacks_range == 0:
-            Bvec = np.append(Bvec, [rhs])
+            b_vec = np.append(b_vec, [rhs])
             slacks = []
         else:
             raise Exception(f"Constraint is infeasible: {ele.i}")
@@ -453,19 +453,19 @@ for _, ele in cons.iterrows():
 
 logging_a_mat = A_coeff.unstack().reset_index()
 logging_a_mat = logging_a_mat[logging_a_mat[0]!= 0]
-logging.debug(f"\nFinal coefficient matrix: \n"+logging_a_mat.to_string())
-logging.debug(f"\nFinal RHS: \n{Bvec}")
-logging.debug(f"Constant RHS term: {Bvec.T@Bvec}")
+logging.debug("\nFinal coefficient matrix: \n"+logging_a_mat.to_string())
+logging.debug(f"\nFinal RHS: \n{b_vec}")
+logging.debug(f"Constant RHS term: {b_vec.T@b_vec}")
 logging.debug(f"Case 2 Offset Penalty Factor: {case2_penalty_offset_factor}")
 logging.debug(f"Fixed Variable contribution to Objective Function: {sum_fixed_obj_var_coeffs}")
 logging.debug(f"Integer variable lower bound contribution: {sum_lower_bound_of_int_vars}")
 
-# A matrix and Bvec are available. Now, for penalization: $(A.X - B)^{2}$  = $(A.X - B)^{T} * (A.X - B)$
-Amat = A_coeff.to_numpy()
+# A matrix and b_vec are available. Now, for penalization: $(A.X - B)^{2}$  = $(A.X - B)^{T} * (A.X - B)$
+a_mat = A_coeff.to_numpy()
 nvars += nslacks # increment the total number of variables by total number of slack variable used
 X_diag = np.zeros((nvars, nvars))
-np.fill_diagonal(X_diag,-Bvec.T@Amat)
-newX = Amat.T@Amat + 2*X_diag
+np.fill_diagonal(X_diag,-b_vec.T@a_mat)
+new_x = a_mat.T@a_mat + 2*X_diag
 
 newobj = np.zeros((nvars,nvars))
 newobj[:len(bin_vars), :len(bin_vars)] = obj # define the new objective: Q for the qubo
@@ -533,8 +533,8 @@ def qubo_to_maxcut(Q):
 
 ### Section to get the qubo for submitting it to the dwave-hybrid method
 if '%method%' == 'qpu':
-    Q = P_qpu*newX + newobj # Note: We are always minimizing in the case of qpu and we have already fixed the direction of obj on line 184
-    offset = P_qpu*Bvec.T@Bvec + P_qpu*case2_penalty_offset_factor
+    Q = P_qpu*new_x + newobj # Note: We are always minimizing in the case of qpu and we have already fixed the direction of obj on line 184
+    offset = P_qpu*b_vec.T@b_vec + P_qpu*case2_penalty_offset_factor
     logging.debug(f"\nPenaly: {P_qpu} | Total Offset: {offset}")
     if Q.size > 0:    
         Qdf = pd.DataFrame(Q, columns=list(A_coeff.columns), index=list(A_coeff.columns))
@@ -546,9 +546,9 @@ if '%method%' == 'qpu':
 
 ### Section to solve the qubo using miqcp
 elif '%method%' in ['classic', 'sdp']:
-    const = P*Bvec.T@Bvec + P*case2_penalty_offset_factor + sum_fixed_obj_var_coeffs + sum_lower_bound_of_int_vars
+    const = P*b_vec.T@b_vec + P*case2_penalty_offset_factor + sum_fixed_obj_var_coeffs + sum_lower_bound_of_int_vars
     logging.debug(f"\nPenalty: {P} | Total Offset: {const}\n")
-    Q = newobj + P*newX
+    Q = newobj + P*new_x
     #sparsity = 1.0 - (np.count_nonzero(Q) / float(Q.size))
     #np.savetxt(fr'%modelName%_p{P}_sprs{sparsity}.csv', Q, delimiter=",")
     # logging.debug("\nFinal Q:\n"+np.array2string(Q))
@@ -697,7 +697,7 @@ Since the QUBO solve returns a different level for the objective variable when t
 """
 x_l = optimized_vals[optimized_vals['i'].isin(rem_syms)]['level'].to_numpy()
 orig_syms_w_new_levels = optimized_vals[optimized_vals['i'].isin(rem_syms)].set_index('i')['level'].to_dict()
-quad_contribution = x_l.T@quad@x_l if checkQuad is not None else 0 #at the moment `quad` only contains contribution from the objective row.
+quad_contribution = x_l.T@quad@x_l if check_quad is not None else 0 #at the moment `quad` only contains contribution from the objective row.
 orig_jacobian = gdx_data['A'].records # A coefficients 
 orig_jacobian = orig_jacobian.pivot(index="i", columns="j", values="value").fillna(0) # arranging in a matrix
 linear_contribution = varContribution(orig_jacobian, orig_syms_w_new_levels, cons=obj_eq_name).flatten()[0]
