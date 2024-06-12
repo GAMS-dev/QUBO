@@ -163,8 +163,8 @@ if fixed_and_lower_bounds: # adjust the rhs of equations when level of variables
     if fixed_vars:
         logging.info(f"\nList of Fixed Variables:\n{fixed_vars}")
         # remove the fixed variables from computation
-        bin_vars = [var for var in bin_vars if var not in fixed_vars.keys()]
-        int_vars = [var for var in int_vars if var not in fixed_vars.keys()]
+        bin_vars = [var for var in bin_vars if var not in fixed_vars]
+        int_vars = [var for var in int_vars if var not in fixed_vars]
         sum_fixed_obj_var_coeffs += np.ndarray.item(var_contribution(raw_a, fixed_vars, cons=obj_eq_name))
         raw_a.drop(fixed_vars, axis=1, inplace=True) # dropping columns from the coefficient matrix
         fixed_var_vals = all_var_vals[all_var_vals['j'].isin(fixed_vars)].copy(deep=True)
@@ -667,12 +667,12 @@ if len(int_vars) != 0: # check if integer variable exist. If yes, combine and me
 
 
 mapper = {}
-for index, ele in all_vars.iterrows(): # extract the domain and symbols from the gdx
+for _, ele in all_vars.iterrows(): # extract the domain and symbols from the gdx
     domain  = re.findall(r'\((.*?)\)', ele['element_text'])
     var_sym = re.findall(r'(.+)(?=\()', ele['element_text'])
     if len(domain) > 0:
         domain = domain[0].strip(r"\'")
-        if var_sym[0] not in mapper.keys():
+        if var_sym[0] not in mapper:
             mapper[var_sym[0]] = {ele['uni'] : domain}
         else:
             mapper[var_sym[0]][ele['uni']] = domain
@@ -688,7 +688,7 @@ for vars, ele in mapper.items():
         newsol.loc[key, 'oldlabel'] = val
     newsol = newsol[['oldlabel', 'level', 'marginal', 'lower','upper','scale']]
     split_labels = newsol['oldlabel'].str.split(',', expand=True)
-    new_columns = ['newlabel{}'.format(i+1) for i in range(split_labels.shape[1])]
+    new_columns = [f'newlabel{i+1}' for i in range(split_labels.shape[1])]
     split_labels.columns = new_columns
     newsol = pd.concat([split_labels, newsol], axis=1)
     newsol.drop(['oldlabel'], axis=1, inplace=True)
