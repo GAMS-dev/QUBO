@@ -57,7 +57,8 @@ option %modelType%=convert;
 Solve %modelName% use %modelType% %direction% %obj%; # dumping the problem data in a gdx file
 
 * QUBO Reformulations
-EmbeddedCode Python: 
+EmbeddedCode Python:
+from typing import Tuple
 import pandas as pd
 from gams import transfer as gt
 import numpy as np
@@ -133,7 +134,7 @@ logging.debug("Coefficient matrix: raw_a\n"+raw_a.to_string())
 logging.debug("\nEquation Data: eq_data\n"+eq_data.to_string())
 logging.debug("\nVariable Data: all_var_vals\n"+all_var_vals.to_string())
 
-def var_contribution(A, vars, cons=slice(None)):
+def var_contribution(A: pd.DataFrame, vars: dict, cons: list | None = None) -> np.array:
     """
     helper function to calculate the contribution of given variables
     in a constraint or set of constraints
@@ -146,6 +147,7 @@ def var_contribution(A, vars, cons=slice(None)):
     Returns:
         np.array of Total contribution of all variables for that constraint
     """
+    cons = slice(None) if cons is None else cons
     coeffs_of_vars_in_constraint = A.loc[cons, vars.keys()].to_numpy()
     lb_var_levels = np.array(list(vars.values())).reshape((len(vars), 1))
     if coeffs_of_vars_in_constraint.size > 0:
@@ -180,7 +182,7 @@ if len(redundant_cons) > 0:
     eq_data.drop(eq_data[eq_data['i'].isin(redundant_cons)].index, axis=0, inplace=True)
 
 
-def gen_slacks(var_range):
+def gen_slacks(var_range: float) -> np.array:
     """
     helper function to generate slacks depending on the range of variables or rhs
 
@@ -252,7 +254,7 @@ special penalty case 1: sum(x_i | 1 <= i <= n) <= 1 => P*sum(x_i*x_j | i < j)
 special penalty case 2: x_i  + x_j >= 1 => P*(1 - x_i - x_j + x_i*x_j)
 """
 
-def check_row_entries(df):
+def check_row_entries(df: pd.DataFrame) -> pd.DataFrame:
     """
     helper function to filter DataFrame having either 0 or 1 entries in each row.
     Args:
@@ -320,24 +322,24 @@ A_coeff = raw_a.loc[cons['i'], bin_vars]
 
 quad = None
 
-def fetch_quadratic_coeff(rawdf):
+def fetch_quadratic_coeff(raw_df: pd.DataFrame) -> np.array:
     """
     helper function to convert the original Q matrix of the problem to a symmetric matrix
 
     Args:
-        rawdf: Original problem Q data in a pd.DataFrame
+        raw_df: Original problem Q data in a pd.DataFrame
 
     Returns: 
         Numpy Q matrix
     """
-    rawdf['value'] /= 2
-    mask = rawdf['j_1'].astype(str) == rawdf['j_2'].astype(str)
-    filtered_quad = rawdf.loc[mask, :].copy()
-    rawdf = rawdf.loc[~mask].copy()
+    raw_df['value'] /= 2
+    mask = raw_df['j_1'].astype(str) == raw_df['j_2'].astype(str)
+    filtered_quad = raw_df.loc[mask, :].copy()
+    raw_df = raw_df.loc[~mask].copy()
     diag_quad = filtered_quad.reset_index(drop=True)
-    quad = rawdf.copy(deep=True)
-    quad['j_1'], quad['j_2'] = rawdf['j_2'], rawdf['j_1']
-    quad  = pd.concat([rawdf, quad, diag_quad], axis=0)
+    quad = raw_df.copy(deep=True)
+    quad['j_1'], quad['j_2'] = raw_df['j_2'], raw_df['j_1']
+    quad  = pd.concat([raw_df, quad, diag_quad], axis=0)
     quad = quad.pivot(index="j_1", columns="j_2", values="value").fillna(0)
     quad = quad.reindex(labels=bin_vars, axis='index')
     quad = quad.reindex(labels=bin_vars, axis='columns')
@@ -349,7 +351,7 @@ if check_quad is not None: # check if quadratic terms are present in the origina
     rawquad_obj = rawquad[rawquad['i_0'].isin(obj_eq_name)].copy(deep=True)
     if len(rawquad_obj.index) != 0:  # check if quadratic terms exist in the objective function
         rawquad_obj.drop(['i_0'],axis=1,inplace=True)
-        quad = fetch_quadratic_coeff(rawdf=rawquad_obj)
+        quad = fetch_quadratic_coeff(raw_df=rawquad_obj)
         sum_fixed_obj_var_coeffs /= 2
     
     rawquad_cons = rawquad[-rawquad['i_0'].isin(obj_eq_name)] # non-linear constraints without objective equation
@@ -377,7 +379,14 @@ if quad is not None: # add the old quadratic terms/matrix to the new objective
     logging.debug("\nNew Q: \n"+np.array2string(obj))
 
 
-def modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks):
+def modify_matrix(
+        b_vec: np.array, 
+        rhs: float, 
+        slacks: np.array, 
+        A_coeff: pd.DataFrame, 
+        ele: pd.Series, 
+        nslacks: int
+    ) -> Tuple[np.array, pd.DataFrame, int]:
     """
     helper function to update the original "A" matrix of coeffs
 
@@ -399,7 +408,7 @@ def modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks):
     nslacks += len(slacks)
     return np.append(b_vec, [rhs]), A_coeff, nslacks
 
-def get_lhs_bounds(ele):
+def get_lhs_bounds(ele: pd.DataFrame) -> Tuple[float, float]:
     """
     helper function to find the bounds of a constraint
 
@@ -430,6 +439,7 @@ for _, ele in cons.iterrows():
         slacks_range = lhs_max_ub - rhs
         if slacks_range > 0:
             slacks = -1*gen_slacks(slacks_range)
+            print(type(ele))
             b_vec, A_coeff, nslacks = modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks)
         elif slacks_range == 0:
             b_vec = np.append(b_vec, [rhs])
@@ -471,7 +481,7 @@ newobj = np.zeros((nvars,nvars))
 newobj[:len(bin_vars), :len(bin_vars)] = obj # define the new objective: Q for the qubo
 
 
-def qubo_to_ising(Q, offset=0.0):
+def qubo_to_ising(Q: dict, offset: float = 0.0) -> Tuple[dict, dict, float]:
     """
     This is the Qubo to Ising Reformulation. Here, the variable X in {-1,1}
 
@@ -518,7 +528,7 @@ def qubo_to_ising(Q, offset=0.0):
     return h, J, offset
 
 
-def qubo_to_maxcut(Q):
+def qubo_to_maxcut(Q: np.array) -> np.array:
     """
     This is the Qubo to Maxcut Reformulation. This can be used for SDP procedures.
     
@@ -777,7 +787,7 @@ if len(int_vars) != 0: # check if integer variable exist. If yes, combine and me
     sample.drop(sample[sample.j.isin(binName_list)].index, inplace=True)
     sample = pd.concat([sample, original_int_vals], ignore_index=True)
 
-def map_vars(gdx_data, solution, obj_val):
+def map_vars(gdx_data: gt.Container, solution: pd.DataFrame, obj_val: float):
 
     """
     helper function to map the solution returned from the qpu to the original problem and set the respective gams symbols
