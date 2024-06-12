@@ -58,18 +58,19 @@ Solve %modelName% use %modelType% %direction% %obj%; # dumping the problem data 
 
 * QUBO Reformulations
 EmbeddedCode Python:
-from typing import Tuple
-import pandas as pd
-from gams import transfer as gt
-import numpy as np
+import logging
 import re
 import warnings
-import logging
+from typing import Tuple
+
+import numpy as np
+import pandas as pd
+from gams import transfer as gt
 
 log_level_dict = {"0": logging.WARN, "1": logging.INFO, "2": logging.DEBUG}
 log_level = log_level_dict.get('%log_on%', logging.WARN)
 
-if log_level < 30:
+if log_level < logging.WARN:
     logging.basicConfig(filename='%modelName%_reformulation.log', filemode='w', format='%(message)s', level=log_level, force=True)
 
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
