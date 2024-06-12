@@ -77,16 +77,16 @@ warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 is_max = "x" in "%direction%".lower()
 gdx_file = r"%modelName%.gdx"
-gdx_data = gt.Container(gdx_file)
-obj_eq_name = gdx_data['iobj'].records
+container = gt.Container(gdx_file)
+obj_eq_name = container['iobj'].records
 
 if obj_eq_name is None:
     raise Exception("The objective is not defined using a scalar equation. `iobj` in gdx is empty. Quitting.")
 
-obj_var = gdx_data['jobj'].records # fetch the objective variable name
-all_vars = gdx_data['j'].records # fetches all variable names
-raw_a = gdx_data['A'].records # A coefficients 
-eq_data = gdx_data['e'].records # fetches equation data
+obj_var = container['jobj'].records # fetch the objective variable name
+all_vars = container['j'].records # fetches all variable names
+raw_a = container['A'].records # A coefficients 
+eq_data = container['e'].records # fetches equation data
 
 if raw_a[-raw_a['i'].isin(obj_eq_name['i'].tolist())]['value'].mod(1).sum(axis=0) > 0: # floating point coeffs in objective function is accepted
     raise Exception("Reformulation with Non-Integer Coefficients not possible. Quitting.")
@@ -96,19 +96,19 @@ raw_a = raw_a.pivot(index="i", columns="j", values="value").fillna(0) # arrangin
 if eq_data['lower'].mod(1).sum(axis=0) > 0 or eq_data['upper'].mod(1).sum(axis=0) > 0:
     raise Exception("Reformulation with Non-Integer RHS not possible. Quitting.")
 
-bin_vars = gdx_data['jb'].records # fetches binary variable names, if any
-int_vars = gdx_data['ji'].records # fetches integer variable names, if any
+bin_vars = container['jb'].records # fetches binary variable names, if any
+int_vars = container['ji'].records # fetches integer variable names, if any
 bin_vars = [] if bin_vars is None else bin_vars['j'].to_list() # check if any bin_vars are present
 int_vars = [] if int_vars is None else int_vars['j'].to_list() # check if any int_vars are present
 obj_var = obj_var['j'].to_list()
-all_var_vals = gdx_data['x'].records # get all variable values, viz., [level, marginal, lower, upper, scale]
+all_var_vals = container['x'].records # get all variable values, viz., [level, marginal, lower, upper, scale]
 
 if len(all_vars) - len(bin_vars) - len(int_vars) != 1: # Continuous variables are not allowed
     raise Exception("There are continuous variables. Quitting.")
 
 obj_eq_name = obj_eq_name['i'].to_list()
 
-check_quad = gdx_data['ANL'].records
+check_quad = container['ANL'].records
    
 """
 Check if there are any fixed variables in the gdx, i.e., lb=ub=level of any variable.
@@ -123,7 +123,7 @@ fixed_and_lower_bounds = {**vars_with_lower_bounds, **fixed_vars}
 sum_fixed_obj_var_coeffs = 0
 
 if check_quad is not None:
-    rawquad = gdx_data['Q'].records # fetch quadratic terms from the original problem, if any.
+    rawquad = container['Q'].records # fetch quadratic terms from the original problem, if any.
 
     if len(int_vars) != 0:
         raise Exception("Quadratic Program with integer variables are not supported.")
@@ -633,14 +633,14 @@ endembeddedCode
     
 * Map the QUBO's solution to the original problem
 EmbeddedCode Python:
-qout = gt.Container('qout_%modelName%.gdx')
-obj_var_coeff = qout['z'].records
-obj_var = gdx_data['jobj'].records['j'].values[0]
+q_container = gt.Container('qout_%modelName%.gdx')
+obj_var_coeff = q_container['z'].records
+obj_var = container['jobj'].records['j'].values[0]
 
-all_vars = gdx_data['j'].records
+all_vars = container['j'].records
 original_obj_sym = all_vars[all_vars['uni'] == obj_var]['element_text'].values[0]
 rem_syms = all_vars[all_vars['uni'] != obj_var]['uni'].to_list()
-optimized_vals = qout['x'].records
+optimized_vals = q_container['x'].records
 
 if fixed_vars:
     fixed_var_vals.rename({'j': 'i'}, axis=1, inplace=True)
@@ -653,7 +653,7 @@ if len(int_vars) != 0: # check if integer variable exist. If yes, combine and me
     bin_to_int_vals['final_level'] = bin_to_int_vals[0]*bin_to_int_vals['level']
     bin_to_int_vals = bin_to_int_vals.groupby('intName')['final_level'].sum().reset_index()
     
-    original_int_vals = gdx_data['x'].records
+    original_int_vals = container['x'].records
     original_int_vals = original_int_vals[original_int_vals['j'].isin(bin_to_int_vals['intName'])].copy(deep=True)
     original_int_vals = pd.merge(original_int_vals, bin_to_int_vals, left_on="j", right_on="intName", how="left")
     original_int_vals.drop(['level', 'intName'], axis=1, inplace=True)
@@ -709,7 +709,7 @@ Since the QUBO solve returns a different level for the objective variable when t
 x_l = optimized_vals[optimized_vals['i'].isin(rem_syms)]['level'].to_numpy()
 orig_syms_w_new_levels = optimized_vals[optimized_vals['i'].isin(rem_syms)].set_index('i')['level'].to_dict()
 quad_contribution = x_l.T@quad@x_l if check_quad is not None else 0 #at the moment `quad` only contains contribution from the objective row.
-orig_jacobian = gdx_data['A'].records # A coefficients 
+orig_jacobian = container['A'].records # A coefficients 
 orig_jacobian = orig_jacobian.pivot(index="i", columns="j", values="value").fillna(0) # arranging in a matrix
 linear_contribution = var_contribution(orig_jacobian, orig_syms_w_new_levels, cons=obj_eq_name).flatten()[0]
 total_objective_contribution = linear_contribution + quad_contribution
@@ -776,7 +776,7 @@ if len(int_vars) != 0: # check if integer variable exist. If yes, combine and me
     bin_to_int_vals['final_level'] = bin_to_int_vals[0]*bin_to_int_vals['level']
     bin_to_int_vals = bin_to_int_vals.groupby('intName')['final_level'].sum().reset_index()
             
-    original_int_vals = gdx_data['x'].records
+    original_int_vals = container['x'].records
     original_int_vals = original_int_vals[original_int_vals['j'].isin(bin_to_int_vals['intName'])].copy(deep=True)
     original_int_vals = pd.merge(original_int_vals, bin_to_int_vals, left_on="j", right_on="intName", how="left")
     original_int_vals.drop(['level', 'intName', 'marginal','lower','upper','scale'], axis=1, inplace=True)
@@ -788,17 +788,17 @@ if len(int_vars) != 0: # check if integer variable exist. If yes, combine and me
     sample.drop(sample[sample.j.isin(binName_list)].index, inplace=True)
     sample = pd.concat([sample, original_int_vals], ignore_index=True)
 
-def map_vars(gdx_data: gt.Container, solution: pd.DataFrame, obj_val: float):
+def map_vars(container: gt.Container, solution: pd.DataFrame, obj_val: float) -> None:
 
     """
     helper function to map the solution returned from the qpu to the original problem and set the respective gams symbols
     """
 
-    oldvars = gdx_data['x'].records
+    oldvars = container['x'].records
     oldvars.drop(['level'], inplace=True, axis=1)
    
     res = solution.merge(oldvars, how='right', on='j')
-    vardict = gdx_data['j'].records
+    vardict = container['j'].records
     separate_sym_domain = vardict['element_text'].str.split('(', expand=True)
 
     if len(separate_sym_domain.columns) == 1: # check if all variables are flat, i.e., no domain
@@ -830,7 +830,7 @@ if is_max:
 else:
     best_val += (sum_fixed_obj_var_coeffs + sum_lower_bound_of_int_vars)
 
-map_vars(gdx_data, sample, best_val)
+map_vars(container, sample, best_val)
 endEmbeddedCode
 $endIf.method
 
