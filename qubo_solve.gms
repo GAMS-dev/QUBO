@@ -153,8 +153,8 @@ def var_contribution(A: pd.DataFrame, vars: dict, cons: list | None = None) -> n
     lb_var_levels = np.array(list(vars.values())).reshape((len(vars), 1))
     if coeffs_of_vars_in_constraint.size > 0:
         return coeffs_of_vars_in_constraint@lb_var_levels
-    else:
-        return np.array([0])
+    
+    return np.array([0])
 
 if fixed_and_lower_bounds: # adjust the rhs of equations when level of variables > 0
     logging.info(f"\nList of variables with lower bounds:\n{vars_with_lower_bounds}")
