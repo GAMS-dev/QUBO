@@ -2,48 +2,50 @@ $offEolCom
 $offListing
 $eolcom #
 
-$setArgs modelName modelType direction obj penalty method_name solver_name maxIter_num timeLimit_num num_of_threads log_on examiner_on
+$set modelName %1
+$set modelType %2
+$set direction %3
+$set obj %4
+$set penalty %5
+$shift shift shift shift shift
 
-$ifThenE.defmethod sameas('%method_name%','') 
-    $$set method classic # classic method by default 
-$elseIfE.defmethod sameas('%method_name%','classic')
-    $$set method classic
-$elseIfE.defmethod sameas('%method_name%','qpu')
-    $$set method qpu
-$else.defmethod
-    $$abort 'Wrong method chosen, [qpu, classic]'
-$endIf.defmethod
+$set method_name classic
+$set solver_name cplex
+$set maxIter_num 1
+$set timeLimit_num 10
+$eval num_of_threads min(8,numcores)
+$set log_on 0
+$set examiner_on 0
 
-$ifThenE.defsolver sameas('%solver_name%','') 
-    $$set solver cplex # default: cplex
-$else.defsolver
-    $$set solver %solver_name%
-$endIf.defsolver
+$label ProcessNamedArguments
+$ splitOption "%1" key val
+$ if x%key%==x $goto ProcessNamedArgumentsDone
+$ ifThenI.qubo_solve__arguments %key%==method
+$  set method %val%
+$  ifE (not(sameas('%method%','classic'))and(not(sameas('%method%','qpu')))) $abort 'Not a valid method name. Vaild values are: [classic, qpu].'
+$ elseIfI.qubo_solve__arguments %key%==solver
+$  set solver %val%
+$ elseIfI.qubo_solve__arguments %key%==maxIter
+$  set maxIter %val%
+$ elseIfI.qubo_solve__arguments %key%==timeLimit
+$  set timeLimit %val%
+$ elseIfI.qubo_solve__arguments %key%==num_of_threads
+$  set num_threads %val%
+$ elseIfI.qubo_solve__arguments %key%==log_on
+$  set log_on %val%
+$  ifE ((%log_on%<>0)and(%log_on%<>1)and(%log_on%<>2)) $abort 'Not a valid log number. Valid values are [0,1,2].'
+$ elseIfI.qubo_solve__arguments %key%==examiner_on
+$  set check_examiner %val%
+$  ifE ((%check_examiner%<>1)and(%check_examiner%<>0)) $abort 'Not a valid examiner_on option. Valid values are [0,1].'
+$ else.qubo_solve__arguments
+$  abort Unknown option %key%.
+$ endif.qubo_solve__arguments
+$ shift
+$ goTo ProcessNamedArguments
+$label ProcessNamedArgumentsDone
 
-$ifThenE.defmaxIter sameas('%maxIter_num%','') 
-    $$set maxIter 1 # 1 by default 
-$else.defmaxIter
-    $$eval maxIter %maxIter_num%
-$endIf.defmaxIter
-
-$ifThenE.defTimeLimit sameas('%timeLimit_num%','') 
-    $$set timeLimit 10 # 10 by default 
-$else.defTimeLimit
-    $$eval timeLimit %timeLimit_num%
-$endIf.defTimeLimit
-
-$ifThenE.defnumThreads sameas('%num_of_threads%','') 
-    $$set num_threads 1 # 1 by default
-$else.defnumThreads
-    $$eval num_threads %num_of_threads%
-$endIf.defnumThreads
-
-$ifThenE.defExaminer sameas('%examiner_on%','1') 
-    $$set check_examiner 1
-    $$echo examineGamsPoint 1 > examiner.opt
-$else.defExaminer
-    $$eval check_examiner 0
-$endIf.defExaminer
+$log *** Options (required):modelName=%modelName%, modelType=%modelType%, direction=%direction%, objectiveVariable=%obj%, penalty=%penalty%
+$log *** Options (optional, all): method=%method_name%, solver=%solver%, maxIter=%maxIter%, timeLimit=%timeLimit%, num_of_threads=%num_threads%, log_on=%log_on%, examiner_on=%check_examiner%
 
 $onEcho > convert.opt
 dumpgdx %modelName%.gdx

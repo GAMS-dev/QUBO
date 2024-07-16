@@ -15,22 +15,22 @@ Following are some examples included to test the qubo reformulation.
 ## Required Packages
 
 1. gamsapi[transfer], [link](https://www.gams.com/latest/docs/API_PY_GETTING_STARTED.html#PY_PIP_INSTALL_BDIST)
-2. dwave-system, required when solving on [Dwave's](https://docs.ocean.dwavesys.com/projects/system/en/latest/installation.html) Hybrid QPU
-
-Note: Generating the API key and setting up the Python-Dwave Environment is considered to be available.
-
+2. dwave-system, required when solving on [Dwave's](https://docs.ocean.dwavesys.com/projects/system/en/latest/installation.html) Hybrid QPU otherwise optional.
 
 ## Input
 
-Once the problem is defined, it can be solved thru the qubo reformulation by including the `qubo_solve.gms` using $batinclude followed by 5 necessary arguments. These arguments must be in the exact order as mentioned below.
+Once the problem is defined, it can be solved through the qubo reformulation by including the `qubo_solve.gms` using $batinclude.
+The `qubo_solve.gms` file should be in the same location where the main gms file is located. If not, the location of the file must be specified by either including it in the $batinclude statement, for e.g., `$batinclude 'location\of\the\file\qubo_solve.gms'` or by setting the command line parameter, `-IDIR`.
+
+The `qubo_solve.gms` requires the following 5 positional arguments. Since they are positional arguments they must be in the exact order as mentioned below.
 
 1. modelName
 2. modelType
-3. objective (max/min)
+3. objectiveSense (max/min)
 4. objectiveVariable
 5. Penalty factor for the constraints
 
-The problem can also be solved on a QPU from Dwave. Following are some optional arguments when the chosen method is `qpu`. The arguments must be passed in the same order. Since these are positional arguments, therefore, if the 8th argument that needs to be set, then arguments 6 & 7 can be skipped by using ''. This will keep them at their respective default.
+Following is the list of optional `key=val` pair arguments, some of which are method specific.
 
 6. method, [qpu, classic] (default: classic)
 7. solver, choice of miqcp solver (default: cplex | effective only if `method=classic`).
@@ -39,6 +39,8 @@ The problem can also be solved on a QPU from Dwave. Following are some optional 
 10. num_threads, Number of threads to be used in case of a classical solve (default: 1 | effective only if method=classic`)
 11. log_on, Creates a log for the reformulation [0, 1, 2] (default: 0, don't create a log)
 12. examiner_on, [0, 1] (default: 0) The quality of returned qubo solution w.r.t the original problem can be checked through the use of `examiner` [tool](https://www.gams.com/latest/docs/S_EXAMINER.html).
+
+Note: Generating the API key and setting up the Python-Dwave Environment is considered to be available when chosen method of solving is `qpu`.
 
 ## Output
 
