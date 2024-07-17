@@ -9,13 +9,13 @@ $set obj %4
 $set penalty %5
 $shift shift shift shift shift
 
-$set method_name classic
-$set solver_name cplex
-$set maxIter_num 1
-$set timeLimit_num 10
-$eval num_of_threads min(8,numcores)
+$set method classic
+$set solver cplex
+$set maxIter 1
+$set timeLimit 10
+$eval num_threads min(8,numcores)
 $set log_on 0
-$set examiner_on 0
+$set examinerOn 0
 
 $label ProcessNamedArguments
 $ splitOption "%1" key val
@@ -29,14 +29,16 @@ $ elseIfI.qubo_solve__arguments %key%==maxIter
 $  set maxIter %val%
 $ elseIfI.qubo_solve__arguments %key%==timeLimit
 $  set timeLimit %val%
-$ elseIfI.qubo_solve__arguments %key%==num_of_threads
+$ elseIfI.qubo_solve__arguments %key%==numThreads
 $  set num_threads %val%
-$ elseIfI.qubo_solve__arguments %key%==log_on
+$ elseIfI.qubo_solve__arguments %key%==logOn
 $  set log_on %val%
 $  ifE ((%log_on%<>0)and(%log_on%<>1)and(%log_on%<>2)) $abort 'Not a valid log number. Valid values are [0,1,2].'
-$ elseIfI.qubo_solve__arguments %key%==examiner_on
-$  set check_examiner %val%
-$  ifE ((%check_examiner%<>1)and(%check_examiner%<>0)) $abort 'Not a valid examiner_on option. Valid values are [0,1].'
+$ elseIfI.qubo_solve__arguments %key%==examinerOn
+$  set examinerOn %val%
+$  IfThenE.examiner_file ((%examinerOn%<>1)and(%examinerOn%<>0)) $abort 'Not a valid examiner_on option. Valid values are [0,1].'
+$  elseIfE.examiner_file %examinerOn%==1 $echo examineGamsPoint 1 > examiner.opt
+$  endIf.examiner_file
 $ else.qubo_solve__arguments
 $  abort Unknown option %key%.
 $ endif.qubo_solve__arguments
@@ -45,7 +47,7 @@ $ goTo ProcessNamedArguments
 $label ProcessNamedArgumentsDone
 
 $log *** Options (required):modelName=%modelName%, modelType=%modelType%, direction=%direction%, objectiveVariable=%obj%, penalty=%penalty%
-$log *** Options (optional, all): method=%method_name%, solver=%solver%, maxIter=%maxIter%, timeLimit=%timeLimit%, num_of_threads=%num_threads%, log_on=%log_on%, examiner_on=%check_examiner%
+$log *** Options (optional, all): method=%method%, solver=%solver%, maxIter=%maxIter%, timeLimit=%timeLimit%, numThreads=%num_threads%, logOn=%log_on%, examinerOn=%examinerOn%
 
 $onEcho > convert.opt
 dumpgdx %modelName%.gdx
@@ -57,6 +59,7 @@ option %modelType%=convert;
 %modelName%.optfile = 1;
 
 Solve %modelName% use %modelType% %direction% %obj%; # dumping the problem data in a gdx file
+put_utility$(%log_on% > 1) 'log' / 'Starting QUBO reformulation.';
 
 * QUBO Reformulations
 EmbeddedCode Python:
@@ -442,7 +445,6 @@ for _, ele in cons.iterrows():
         slacks_range = lhs_max_ub - rhs
         if slacks_range > 0:
             slacks = -1*gen_slacks(slacks_range)
-            print(type(ele))
             b_vec, A_coeff, nslacks = modify_matrix(b_vec, rhs, slacks, A_coeff, ele, nslacks)
         elif slacks_range == 0:
             b_vec = np.append(b_vec, [rhs])
@@ -596,6 +598,7 @@ elif '%method%' in ['classic', 'sdp']:
             raise Exception("All variables are fixed. Q matrix is Empty. Quitting SDP SOLVE.")
     m.write('qout_%modelName%.gdx')
 endEmbeddedCode
+put_utility$(%log_on% > 1) 'log' / 'Reformulation complete. The Q matrix should be available in qout_%modelName%.gdx';
 
 abort$execError 'Error occured in Reformulation!';
 
@@ -628,6 +631,7 @@ option miqcp=%solver%, threads=%num_threads%;
 
 qubo.reslim = %timeLimit%;
 
+put_utility$(%log_on% > 1) 'log' / 'Solving QUBO classically using -solver=%solver%';
 Solve qubo %direction% z using miqcp;
 
 execute_unload 'qout_%modelName%.gdx';
@@ -734,7 +738,7 @@ try:
 except:
     raise Exception("Package 'Dimod' is not available")
 
-print("Submitting problem to QPU")
+gams.printLog("Submitting problem to QPU")
 solver = LeapHybridSampler.default_solver
 sampler = LeapHybridSampler(solver=solver)
 from datetime import datetime
@@ -748,7 +752,7 @@ if Q.size > 0:# check if QMatrix exist, if not skip model generation
     sampler_label_base = f'QUBO-%modelName%-{cur_date}'
 
     for counter in range(max_iter): # For repeated sampling, a default option is not avaiable for the chosen sampler
-        print("Solve number:", counter+1)
+        gams.printLog(f"Solve number: {counter+1}")
         answer = sampler.sample(bqm, label=f'{sampler_label_base}-{counter+1}', time_limit=%timeLimit%)
         new_df = answer.to_pandas_dataframe()
         all_sol = pd.concat([all_sol, new_df], ignore_index=True)
@@ -758,8 +762,8 @@ if Q.size > 0:# check if QMatrix exist, if not skip model generation
     best_sol.drop(['energy', 'num_occurrences'], axis=1, inplace=True)
     best_sol = best_sol.loc[0].to_dict()
         
-    print(f"Best Objective Value: {best_val}")
-    print(f"All solutions:\n{all_sol}")
+    gams.printLog(f"Best Objective Value: {best_val}")
+    gams.printLog(f"All solutions:\n{all_sol}")
 
     sample = pd.DataFrame(best_sol.items(), columns=['j', 'level'])
 else:
@@ -836,7 +840,7 @@ map_vars(container, sample, best_val)
 endEmbeddedCode
 $endIf.method
 
-$ifThenE.run_examiner %check_examiner%
+$ifThenE.run_examiner %examinerOn%
 
 option solver=examiner;
 %modelName%.optfile = 1;

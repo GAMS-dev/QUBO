@@ -32,6 +32,8 @@ Model quadZeroOne /all/;
 *option miqcp=cplex;
 *Solve quadZeroOne use miqcp min z;
 
-$batInclude qubo_solve quadZeroOne MIQCP min z 10
+option limrow=0, limcol=0;
+
+$batinclude  '..\qubo_solve.gms' quadZeroOne MIQCP min z 10
 
 display x.l, z.l;

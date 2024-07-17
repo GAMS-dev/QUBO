@@ -22,6 +22,8 @@ Model setPartition /all/;
 
 *Solve setPartition use MIP min z;
 
-$batInclude qubo_solve setPartition MIP min z 10
+option limrow=0, limcol=0;
+
+$batinclude  '..\qubo_solve.gms' setPartition MIP min z 10
 
 display x.l, z.l;

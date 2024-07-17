@@ -30,17 +30,28 @@ The `qubo_solve.gms` requires the following 5 positional arguments. Since they a
 4. objectiveVariable
 5. Penalty factor for the constraints
 
-Following is the list of optional `key=val` pair arguments, some of which are method specific.
+Following is the list of optional `-key=val` pair arguments, some of which are method specific.
 
 6. method, [qpu, classic] (default: classic)
-7. solver, choice of miqcp solver (default: cplex | effective only if `method=classic`).
-8. max_iter, Number of times the problem is solved on the QPU (default: 1 | effective only if `method=qpu`)
+7. solver, choice of miqcp solver (default: cplex | effective only if `-method=classic`).
+8. maxIter, Number of times the problem is solved on the QPU (default: 1 | effective only if `-method=qpu`)
 9. timeLimit, Time limit for 1 iteration on QPU or TimeLimit for a classical solve (default: 10)
-10. num_threads, Number of threads to be used in case of a classical solve (default: 1 | effective only if method=classic`)
-11. log_on, Creates a log for the reformulation [0, 1, 2] (default: 0, don't create a log)
-12. examiner_on, [0, 1] (default: 0) The quality of returned qubo solution w.r.t the original problem can be checked through the use of `examiner` [tool](https://www.gams.com/latest/docs/S_EXAMINER.html).
+10. numThreads, Number of threads to be used in case of a classical solve (default: min(8,num_of_cores) | effective only if `-method=classic`)
+11. logOn, Creates a log for the reformulation [0, 1, 2] (default: 0, don't create a log)
+12. examinerOn, [0, 1] (default: 0) The quality of returned qubo solution w.r.t the original problem can be checked through the use of `examiner` [tool](https://www.gams.com/latest/docs/S_EXAMINER.html).
 
 Note: Generating the API key and setting up the Python-Dwave Environment is considered to be available when chosen method of solving is `qpu`.
+
+## How to run
+
+- Download GAMS from https://www.gams.com/download/
+- Install GAMS
+- Run the main gms file with the desired options by including them in the main file through the `$batinclude` statement. For e.g., `$batinclude qubo_solve.gms setPacking MIP max z 6 -solver=cplex -timeLimit=60 -numThreads=2 -logOn=2`
+  - from GAMS Studio: Open the main problem file in GAMS studio. If qubo_solve.gms is not in the same directory as the main problem file, enter `-IDIR=<path//to//qubo_solve.gms>` in the [parameter editor](https://www.gams.com/latest/docs/T_STUDIO.html#STUDIO_TOOLBAR) and hit the run button (or press F9)
+  - from the command line
+    ```
+    gams '.\QAP.gms' -IDIR=<path//to//qubo_solve.gms>
+    ```
 
 ## Output
 

@@ -23,6 +23,8 @@ Model zeroOneProblem /all/;
 
 *Solve zeroOneProblem use mip max z;
 
-$batInclude qubo_solve zeroOneProblem MIP max z 10
+option limrow=0, limcol=0;
+
+$batinclude  '..\qubo_solve.gms' zeroOneProblem MIP max z 10
 
 display x.l, z.l;

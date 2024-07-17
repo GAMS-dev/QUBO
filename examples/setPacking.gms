@@ -18,13 +18,8 @@ Model setPacking /all/;
 
 *Solve setPacking using mip max z;
 
-$set method classic
-$set solver cplex
-$set max_iter 1
-$set timeLimit 60
-$set num_threads 3
-$set log_on 2
+option limrow=0, limcol=0;
 
-$batInclude qubo_solve setPacking MIP max z 6 %method% %solver% %max_iter% %timeLimit% %num_threads% %log_on%
+$batinclude  '..\qubo_solve.gms' setPacking MIP max z 6 -solver=cplex -timeLimit=60 -numThreads=2 -logOn=2
 
 display x.l, z.l;
