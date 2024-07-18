@@ -154,7 +154,7 @@ $call rm test7.gms
 $call rm test7.lst
 $call rm test7.gdx
 
-$log Test 8: Non-zero vairable levels in a quadratic problem.
+$log Test 8: Non-zero variable levels in a Quadratic problem
 $onEcho>test8.gms
 Set i/1*5/;
 alias (i,j);
