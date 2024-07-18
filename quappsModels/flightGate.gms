@@ -50,13 +50,7 @@ Model fga_l /all - eq_restrict_arrival/;
 *Solve fga minimizing TOTCOST using miqcp;
 
 $set penalty 650 !!This comes from the Scalar - pen_one_gate
-$set method classic
-$set solver gurobi
-$set max_iter 1
-$set timeLimit 60
-$set num_threads 4
-$set log_on 0
 
-$batInclude qubo_solve fga_l miqcp min TOTCOST 650 %method% %solver% %max_iter% %timeLimit% %num_threads% %log_on%
+$batInclude qubo_solve fga_l miqcp min TOTCOST 650 -solver=gurobi -timeLimit=60 -numThreads=4
 
 display X.l, TOTCOST.l;
