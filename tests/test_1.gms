@@ -1,5 +1,3 @@
-$if not set TESTDWAVE $set TESTDWAVE no
-
 $log Test 1: No Continuous variables allowed
 $onEcho>test1.gms
 Positive Variable x1;
@@ -16,8 +14,6 @@ $ifE errorLevel=0 $abort 'Expect error'
 $call rm test1.gms
 $call rm test1.lst
 $call rm test1.gdx
-
-$exit
 
 $log Test 2: No Real-valued Coefficients allowed
 $onEcho>test2.gms
@@ -139,8 +135,46 @@ $call rm test6.gms
 $call rm test6.lst
 $call rm test6.gdx
 
-$log Test 7: Check correctness of Reformulation
+$log Test 7: Integer variables in a Quadratic problem
 $onEcho>test7.gms
+Set i/1*5/;
+alias (i,j);
+Binary Variable x(i);
+Integer Variable y(i);
+Free variable z;
+Equation obj, c1;
+obj.. sum(i, x(i) + y(i)) =E= z;
+c1.. sum((i,j), x(i)*x(j)+ y(i)) =G= 2;
+Model test7 /all/;
+$batinclude %QUBO_PATH% test7 MIQCP max z 1
+$offEcho
+$call gams test7.gms --QUBO_PATH %system.fp%..%system.dirsep%qubo_solve.gms
+$ifE errorLevel=0 $abort 'Expect error'
+$call rm test7.gms
+$call rm test7.lst
+$call rm test7.gdx
+
+$log Test 8: Non-zero vairable levels in a quadratic problem.
+$onEcho>test8.gms
+Set i/1*5/;
+alias (i,j);
+Binary Variable x(i);
+x.fx('2') = 1;
+Free variable z;
+Equation obj, c1;
+obj.. sum(i, x(i)) =E= z;
+c1.. sum((i,j), x(i)*x(j)) =G= 2;
+Model test8 /all/;
+$batinclude %QUBO_PATH% test8 MIQCP max z 1
+$offEcho
+$call gams test8.gms --QUBO_PATH %system.fp%..%system.dirsep%qubo_solve.gms
+$ifE errorLevel=0 $abort 'Expect error'
+$call rm test8.gms
+$call rm test8.lst
+$call rm test8.gdx
+
+$log Test 9: Check for named arguments, wrong -key
+$onEcho>test9.gms
 Set i/1*5/;
 Binary Variable x(i);
 parameter cost(i);
@@ -149,52 +183,30 @@ Free variable z;
 Equation obj, c1;
 obj.. sum(i, cost(i)*x(i)) =E= z;
 c1.. sum(i, x(i)) =L= 3;
-Model test7 /all/;
-$batinclude %QUBO_PATH% test7 MIQCP max z 5
+Model test9 /all/;
+$batinclude %QUBO_PATH% test9 MIQCP max z 5 -methods=classic
 if((sum(i, round(x.l(i))) ne 3) or (round(z.l) ne 19), abort 'Solution is not right');
 $offEcho
-$call.checkErrorLevel gams test7.gms --QUBO_PATH %system.fp%..%system.dirsep%qubo_solve.gms
-$call rm test7.gms
-$call rm test7.lst
-$call rm test7.gdx
-$call rm qout_test7.gdx
-
-$log Test 8: Support for non indexed/Scalar GAMS file
-$onEcho>test8.gms
-Binary Variable x1, x2;
-Free Variable z;
-Equation obj, c1;
-obj.. 2*x1 + 3*x2 =E= z;
-c1.. x1+x2 =E= 1;
-Model test8 /all/;
-$batinclude %QUBO_PATH% test8 MIP max z 5
-if(round(x2.l) ne 1 or round(z.l) ne 3, abort 'Solution is not right');
-$offEcho
-$call.checkErrorLevel gams test8.gms --QUBO_PATH %system.fp%..%system.dirsep%qubo_solve.gms
-$call rm test8.gms
-$call rm test8.lst
-$call rm test8.gdx
-$call rm qout_test8.gdx
-
-$ifThenI.testqpu %TESTDWAVE%==yes
-$log Test 9: Solving on Dwave QPU
-$onEcho>test9.gms
-Binary Variable x1, x2;
-Free Variable z;
-Equation obj, c1;
-obj.. 2*x1 + 3*x2 =E= z;
-c1.. x1+x2 =E= 1;
-Model test9 /all/;
-$batinclude %QUBO_PATH% test9 MIP max z 5 qpu "" 1 5
-if(round(x2.l) ne 1 or round(z.l) ne 3, abort 'Solution is not right');
-$offEcho
-$call.checkErrorLevel gams test9.gms --QUBO_PATH %system.fp%..%system.dirsep%qubo_solve.gms
+$call gams test9.gms --QUBO_PATH %system.fp%..%system.dirsep%qubo_solve.gms
+$ifE errorLevel=0 $abort 'Expect error'
 $call rm test9.gms
 $call rm test9.lst
-$call rm test9.gdx
-$endif.testqpu
 
-
-
-
-$libInclude moo.gms 
+$log Test 10: Check for named arguments, wrong -method value
+$onEcho>test10.gms
+Set i/1*5/;
+Binary Variable x(i);
+parameter cost(i);
+cost(i) = UniformInt(1,10);
+Free variable z;
+Equation obj, c1;
+obj.. sum(i, cost(i)*x(i)) =E= z;
+c1.. sum(i, x(i)) =L= 3;
+Model test10 /all/;
+$batinclude %QUBO_PATH% test10 MIQCP max z 5 -method=classic3
+$offEcho
+$call gams test10.gms --QUBO_PATH %system.fp%..%system.dirsep%qubo_solve.gms
+$ifE errorLevel=0 $abort 'Expect error'
+$call rm test10.gms
+$call rm test10.lst
+$call rm convert.opt

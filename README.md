@@ -1,6 +1,12 @@
-# QUBO Reformulation
+# QUBOs
 
-Following are some examples included to test the qubo reformulation.
+A QUBO, Quadratic Unconstrained Binary Optimization, is a type of optimization problem where the aim is to find the best combination of binary choices (0/1) to maximize or minimize a quadratic objective function. It involves no constraints except that the variables are binary.
+
+The QUBO model's significance in combinatorial optimization is heightened by its equivalence to the Ising model, which is prominent in physics. Consequently, the broad range of optimization problems solved effectively by state-ofthe-art QUBO solution methods are joined by an important domain of problems arising in physics applications.
+
+## QUBO Reformulation
+
+The reformulation is derived from, A Tutorial on Formulating and Using QUBO Models. Glover, F., Kochenberger, G., & Du, Y. [2019](https://arxiv.org/abs/1811.11538). Following are some examples included to test the qubo reformulation.
 
 1. setPacking.gms, Set Packing Problem (max)
 2. O1program.gms, General 0/1 Problem (max)

@@ -22,7 +22,7 @@ $ splitOption "%1" key val
 $ if x%key%==x $goto ProcessNamedArgumentsDone
 $ ifThenI.qubo_solve__arguments %key%==method
 $  set method %val%
-$  ifE (not(sameas('%method%','classic'))and(not(sameas('%method%','qpu')))) $abort 'Not a valid method name. Vaild values are: [classic, qpu].'
+$  ifE (not(sameas('%method%','classic'))and(not(sameas('%method%','qpu')))) $abort 'Not a valid method. Vaild values are: [classic, qpu].'
 $ elseIfI.qubo_solve__arguments %key%==solver
 $  set solver %val%
 $ elseIfI.qubo_solve__arguments %key%==maxIter
@@ -36,11 +36,11 @@ $  set log_on %val%
 $  ifE ((%log_on%<>0)and(%log_on%<>1)and(%log_on%<>2)) $abort 'Not a valid log number. Valid values are [0,1,2].'
 $ elseIfI.qubo_solve__arguments %key%==examinerOn
 $  set examinerOn %val%
-$  IfThenE.examiner_file ((%examinerOn%<>1)and(%examinerOn%<>0)) $abort 'Not a valid examiner_on option. Valid values are [0,1].'
+$  IfThenE.examiner_file ((%examinerOn%<>1)and(%examinerOn%<>0)) $abort 'Not a valid examinerOn option. Valid values are [0,1].'
 $  elseIfE.examiner_file %examinerOn%==1 $echo examineGamsPoint 1 > examiner.opt
 $  endIf.examiner_file
 $ else.qubo_solve__arguments
-$  abort Unknown option %key%.
+$  abort Unknown option `%key%`.
 $ endif.qubo_solve__arguments
 $ shift
 $ goTo ProcessNamedArguments
@@ -66,7 +66,7 @@ EmbeddedCode Python:
 import logging
 import re
 import warnings
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -140,7 +140,7 @@ logging.debug("Coefficient matrix: raw_a\n"+raw_a.to_string())
 logging.debug("\nEquation Data: eq_data\n"+eq_data.to_string())
 logging.debug("\nVariable Data: all_var_vals\n"+all_var_vals.to_string())
 
-def var_contribution(A: pd.DataFrame, vars: dict, cons: list | None = None) -> np.array:
+def var_contribution(A: pd.DataFrame, vars: dict, cons: Optional[list] = None) -> np.array:
     """
     helper function to calculate the contribution of given variables
     in a constraint or set of constraints
