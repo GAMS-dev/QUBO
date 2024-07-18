@@ -46,7 +46,7 @@ $ shift
 $ goTo ProcessNamedArguments
 $label ProcessNamedArgumentsDone
 
-$log *** Options (required):modelName=%modelName%, modelType=%modelType%, direction=%direction%, objectiveVariable=%obj%, penalty=%penalty%
+$log *** Options (required):modelName=%modelName%, modelType=%modelType%, objective=%direction%, objectiveVariable=%obj%, penalty=%penalty%
 $log *** Options (optional, all): method=%method%, solver=%solver%, maxIter=%maxIter%, timeLimit=%timeLimit%, numThreads=%num_threads%, logOn=%log_on%, examinerOn=%examinerOn%
 
 $onEcho > convert.opt

@@ -32,7 +32,7 @@ The `qubo_solve.gms` requires the following 5 positional arguments. Since they a
 
 1. modelName
 2. modelType
-3. objectiveSense (max/min)
+3. objective (max/min)
 4. objectiveVariable
 5. Penalty factor for the constraints
 
