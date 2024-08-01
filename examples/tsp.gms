@@ -38,6 +38,8 @@ eq_exact_node(n)$[not n.first]..                        sum(i$[not i.first and n
 
 Model tsp /all/;
 
+option limrow=0, limcol=0;
+
 *option miqcp=cplex;
 *Solve tsp using miqcp min TOTCOST;
 

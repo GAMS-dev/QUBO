@@ -19,6 +19,8 @@ eq_get_one_clr(n)..     sum(c, X(n,c)) =E= 1;
 
 Model mcs /all/;
 
+option limrow=0, limcol=0;
+
 *option miqcp=cplex;
 *Solve mcs min TOTCOST using miqcp;
 
