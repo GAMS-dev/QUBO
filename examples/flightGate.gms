@@ -46,11 +46,11 @@ Model fga /all - eq_restrict_arrival_linear/;
 
 Model fga_l /all - eq_restrict_arrival/;
 
-*option miqcp=gurobi;
+*option miqcp=cplex;
 *Solve fga minimizing TOTCOST using miqcp;
 
 $set penalty 650 !!This comes from the Scalar - pen_one_gate
 
-$batInclude qubo_solve fga_l miqcp min TOTCOST 650 -solver=gurobi -timeLimit=60 -numThreads=4
+$batInclude '..\qubo_solve.gms' fga_l miqcp min TOTCOST 650 -solver=cplex -timeLimit=60 -numThreads=4
 
 display X.l, TOTCOST.l;

@@ -22,6 +22,6 @@ Model mcs /all/;
 *option miqcp=cplex;
 *Solve mcs min TOTCOST using miqcp;
 
-$batInclude qubo_solve mcs miqcp min TOTCOST 10 -solver=cplex -timeLimit=60
+$batInclude '..\qubo_solve.gms' mcs miqcp min TOTCOST 10 -solver=cplex -timeLimit=60
 
 display X.l, TOTCOST.l;

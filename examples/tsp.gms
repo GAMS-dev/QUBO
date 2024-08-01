@@ -44,6 +44,6 @@ Model tsp /all/;
 * model attribute holdfixed results in fixed variables being treated as constants
 tsp.holdfixed = 1;
 
-$batInclude qubo_solve tsp miqcp min TOTCOST 10 -solver=cplex -timeLimit=60
+$batInclude '..\qubo_solve.gms' tsp miqcp min TOTCOST 10 -solver=cplex -timeLimit=60
 
 display X.l;
