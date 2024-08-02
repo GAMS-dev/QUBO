@@ -38,19 +38,14 @@ eq_exact_node(n)$[not n.first]..                        sum(i$[not i.first and n
 
 Model tsp /all/;
 
+option limrow=0, limcol=0;
+
 *option miqcp=cplex;
 *Solve tsp using miqcp min TOTCOST;
 
 * model attribute holdfixed results in fixed variables being treated as constants
 tsp.holdfixed = 1;
 
-$set method classic
-$set solver cplex
-$set max_iter 1
-$set timeLimit 60
-$set num_threads 1
-$set log_on 0
-
-$batInclude qubo_solve tsp miqcp min TOTCOST 10 %method% %solver% %max_iter% %timeLimit% %num_threads% %log_on%
+$batInclude '..\qubo_solve.gms' tsp miqcp min TOTCOST 10 -solver=cplex -timeLimit=60
 
 display X.l;

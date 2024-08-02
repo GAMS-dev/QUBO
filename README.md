@@ -1,6 +1,12 @@
-# QUBO Reformulation
+# QUBOs
 
-Following are some examples included to test the qubo reformulation.
+A QUBO, Quadratic Unconstrained Binary Optimization, is a type of optimization problem where the aim is to find the best combination of binary choices (0/1) to maximize or minimize a quadratic objective function. It involves no constraints except that the variables are binary.
+
+The QUBO model's significance in combinatorial optimization is heightened by its equivalence to the Ising model, which is prominent in physics. Consequently, the broad range of optimization problems solved effectively by state-ofthe-art QUBO solution methods are joined by an important domain of problems arising in physics applications.
+
+## QUBO Reformulation
+
+The reformulation is derived from, A Tutorial on Formulating and Using QUBO Models. Glover, F., Kochenberger, G., & Du, Y. [2019](https://arxiv.org/abs/1811.11538). Following are some examples included to test the qubo reformulation.
 
 1. setPacking.gms, Set Packing Problem (max)
 2. O1program.gms, General 0/1 Problem (max)
@@ -15,14 +21,14 @@ Following are some examples included to test the qubo reformulation.
 ## Required Packages
 
 1. gamsapi[transfer], [link](https://www.gams.com/latest/docs/API_PY_GETTING_STARTED.html#PY_PIP_INSTALL_BDIST)
-2. dwave-system, required when solving on [Dwave's](https://docs.ocean.dwavesys.com/projects/system/en/latest/installation.html) Hybrid QPU
-
-Note: Generating the API key and setting up the Python-Dwave Environment is considered to be available.
-
+2. dwave-system, required when solving on [Dwave's](https://docs.ocean.dwavesys.com/projects/system/en/latest/installation.html) Hybrid QPU otherwise optional.
 
 ## Input
 
-Once the problem is defined, it can be solved thru the qubo reformulation by including the `qubo_solve.gms` using $batinclude followed by 5 necessary arguments. These arguments must be in the exact order as mentioned below.
+Once the problem is defined, it can be solved through the qubo reformulation by including the `qubo_solve.gms` using $batinclude.
+The `qubo_solve.gms` file should be in the same location where the main gms file is located. If not, the location of the file must be specified by either including it in the $batinclude statement, for e.g., `$batinclude 'location\of\the\file\qubo_solve.gms'` or by setting the command line parameter, `-IDIR`.
+
+The `qubo_solve.gms` requires the following 5 positional arguments. Since they are positional arguments they must be in the exact order as mentioned below.
 
 1. modelName
 2. modelType
@@ -30,15 +36,28 @@ Once the problem is defined, it can be solved thru the qubo reformulation by inc
 4. objectiveVariable
 5. Penalty factor for the constraints
 
-The problem can also be solved on a QPU from Dwave. Following are some optional arguments when the chosen method is `qpu`. The arguments must be passed in the same order. Since these are positional arguments, therefore, if the 8th argument that needs to be set, then arguments 6 & 7 can be skipped by using ''. This will keep them at their respective default.
+Following is the list of optional `-key=val` pair arguments, some of which are method specific.
 
 6. method, [qpu, classic] (default: classic)
-7. solver, choice of miqcp solver (default: cplex | effective only if `method=classic`).
-8. max_iter, Number of times the problem is solved on the QPU (default: 1 | effective only if `method=qpu`)
+7. solver, choice of miqcp solver (default: cplex | effective only if `-method=classic`).
+8. maxIter, Number of times the problem is solved on the QPU (default: 1 | effective only if `-method=qpu`)
 9. timeLimit, Time limit for 1 iteration on QPU or TimeLimit for a classical solve (default: 10)
-10. num_threads, Number of threads to be used in case of a classical solve (default: 1 | effective only if method=classic`)
-11. log_on, Creates a log for the reformulation [0, 1, 2] (default: 0, don't create a log)
-12. examiner_on, [0, 1] (default: 0) The quality of returned qubo solution w.r.t the original problem can be checked through the use of `examiner` [tool](https://www.gams.com/latest/docs/S_EXAMINER.html).
+10. numThreads, Number of threads to be used in case of a classical solve (default: min(8,num_of_cores) | effective only if `-method=classic`)
+11. logOn, Creates a log for the reformulation [0, 1, 2] (default: 0, don't create a log)
+12. examinerOn, [0, 1] (default: 0) The quality of returned qubo solution w.r.t the original problem can be checked through the use of `examiner` [tool](https://www.gams.com/latest/docs/S_EXAMINER.html).
+
+Note: Generating the API key and setting up the Python-Dwave Environment is considered to be available when chosen method of solving is `qpu`.
+
+## How to run
+
+- Download GAMS from https://www.gams.com/download/
+- Install GAMS
+- Run the main gms file with the desired options by including them in the main file through the `$batinclude` statement. For e.g., `$batinclude qubo_solve.gms setPacking MIP max z 6 -solver=cplex -timeLimit=60 -numThreads=2 -logOn=2`
+  - from GAMS Studio: Open the main problem file in GAMS studio. If qubo_solve.gms is not in the same directory as the main problem file, enter `-IDIR=<path//to//qubo_solve.gms>` in the [parameter editor](https://www.gams.com/latest/docs/T_STUDIO.html#STUDIO_TOOLBAR) and hit the run button (or press F9)
+  - from the command line
+    ```
+    gams '.\QAP.gms' -IDIR=<path//to//qubo_solve.gms>
+    ```
 
 ## Output
 

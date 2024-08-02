@@ -19,17 +19,11 @@ eq_get_one_clr(n)..     sum(c, X(n,c)) =E= 1;
 
 Model mcs /all/;
 
+option limrow=0, limcol=0;
+
 *option miqcp=cplex;
 *Solve mcs min TOTCOST using miqcp;
 
-
-$set method classic
-$set solver cplex
-$set max_iter 1
-$set timeLimit 60
-$set num_threads 1
-$set log_on 0
-
-$batInclude qubo_solve mcs miqcp min TOTCOST 10 %method% %solver% %max_iter% %timeLimit% %num_threads% %log_on%
+$batInclude '..\qubo_solve.gms' mcs miqcp min TOTCOST 10 -solver=cplex -timeLimit=60
 
 display X.l, TOTCOST.l;

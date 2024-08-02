@@ -31,4 +31,6 @@ c3.. sum(i, newX(i))    =G= 3;
 model demo_model /all/;
 
 *solve demo_model using mip max z;
-$batinclude qubo_solve demo_model mip max z 10
+option limrow=0, limcol=0;
+
+$batinclude  '..\qubo_solve.gms' demo_model mip max z 10

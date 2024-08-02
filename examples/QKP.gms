@@ -23,6 +23,8 @@ Model qkp /all/;
 *option miqcp=cplex;
 *solve qkp using miqcp max z;
 
-$batinclude qubo_solve qkp miqcp max z 10
+option limrow=0, limcol=0;
+
+$batinclude  '..\qubo_solve.gms' qkp miqcp max z 10
 
 display x.l, z.l;

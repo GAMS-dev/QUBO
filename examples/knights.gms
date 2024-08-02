@@ -57,46 +57,8 @@ option optCr = 0, optCa = .999;
 
 *solve knight using mip max total;
 
-$batinclude qubo_solve knight mip max total 1 qpu "" 10
+option limrow=0, limcol=0;
+
+$batinclude  '..\qubo_solve.gms' knight mip max total 1 -method=qpu -timeLimit=10
 
 display total.l;
-*solve knightx using mip max total;
-
-$exit
-
-* Now we try to see how many different ways are there to arrange
-* the same number of knights.
-
-Scalar maxknight;
-maxknight = total.l;
-total.lo  = total.l - 0.5;
-
-option optCr = 1, optCa = 100, limCol = 0, limRow = 0, solPrint = off;
-
-Set
-   ss    'max number of solutions groups' / seq1*seq20 /
-   s(ss) 'dynamic set for solution groups';
-
-Parameter cutval 'all possible solutions for cut generation';
-
-Equation cut(ss) 'known solutions to be eliminated';
-
-cut(s).. sum((i,j), cutval(s,i,j)*x(i,j)) =l= maxknight - 1;
-
-Model knight1 / deftotal, defmovex, cut /;
-
-s(ss) = no;
-total.lo = maxknight - .5;
-knight1.solveStat = %solveStat.normalCompletion%;
-knight1.modelStat = %modelStat.optimal%;
-
-loop(ss$(knight1.solveStat = %solveStat.normalCompletion% and
-        (knight1.modelStat = %modelStat.optimal% or
-         knight1.modelStat = %modelStat.integerSolution%)),
-   s(ss) = yes;
-   cutval(ss,i,j) = x.l(i,j);
-   solve knight1 maximizing total using mip;
-);
-
-option  cutval:0:0:1;
-display cutval;

@@ -446,19 +446,8 @@ $if NOT '%gams.u1%' == '' $include '%gams.u1%'
 qplib_5881.tolproj = 0.0;
 $if not set MIQCP $set MIQCP MIQCP
 
-*
-*$onEcho>convert.opt
-*dumpgdx 5881.gdx
-*GDXQuadratic 1
-*$offEcho
-*
-*option miqcp=convert;
-*
-*m.optfile=1;
-*m.reslim=5;
-*
 *Solve qplib_5881 using %MIQCP% maximizing objvar;
 
-$batInclude qubo_solve qplib_5881 miqcp max objvar 1
+$batinclude  '..\qubo_solve.gms' qplib_5881 miqcp max objvar 1
 
 display objvar.l;

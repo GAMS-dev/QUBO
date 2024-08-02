@@ -30,9 +30,8 @@ c2(i).. sum(j, x(i,j)) =E= 1;
 
 Model qap /all/;
 
-*option miqcp=cplex;
-*solve qap min z use miqcp;
+option limrow=0, limcol=0;
 
-$batInclude qubo_solve qap MIQCP min z 200
+$batinclude '..\qubo_solve.gms' qap MIQCP min z 200
 
 display x.l, z.l;
