@@ -8,14 +8,18 @@ The QUBO model's significance in combinatorial optimization is heightened by its
 
 The reformulation is derived from, A Tutorial on Formulating and Using QUBO Models. Glover, F., Kochenberger, G., & Du, Y. [2019](https://arxiv.org/abs/1811.11538). Following are some examples included to test the qubo reformulation.
 
-1. setPacking.gms, Set Packing Problem (max)
-2. O1program.gms, General 0/1 Problem (max)
-3. QAP.gms, Quadratic Assignment Problem (min)
-4. setPartition.gms, Set Partitioning Problem (min)
-5. QKP.gms, Quadratic Knapsack Problem (max)
-6. generalIP.gms, a general integer problem (max)
-7. qplib_5881.gms, a flat/scalar gms file (max)
-8. knights.gms, A Max problem from GAMS modlib
+1. [setPacking.gms](./examples/setPacking.gms), Set Packing Problem (max)
+2. [O1program.gms](./examples/01program.gms), General 0/1 Problem (max)
+3. [QAP.gms](./examples/QAP.gms), Quadratic Assignment Problem (min)
+4. [setPartition.gms](./examples/setPartition.gms), Set Partitioning Problem (min)
+5. [QKP.gms](./examples/QKP.gms), Quadratic Knapsack Problem (max)
+6. [generalIP.gms](./examples/generalIP.gms), a general integer problem (max)
+7. [qplib_5881.gms](./examples/qplib_5881.gms), a flat/scalar gms file (max)
+8. [knights.gms](./examples/knights.gms), A Max problem from GAMS modlib
+9. [Q01.gms](./examples/Q01.gms), Quadratic 0/1 Problem (min)
+10. [flightGate.gms](./examples/flightGate.gms), Flight gate assignment Problem (min)
+11. [maxColorSubgraphs.gms](./examples/maxColorSubgraph.gms), Maximum colorable subgraph problem (min)
+12. [tsp.gms](./examples/tsp.gms), Traveling Salesman Problem (min)
 
 
 ## Required Packages
