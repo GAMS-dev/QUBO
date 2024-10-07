@@ -16,6 +16,7 @@ $set timeLimit 10
 $eval num_threads min(8,numcores)
 $set log_on 0
 $set examinerOn 0
+$set getQ "n"
 
 $label ProcessNamedArguments
 $ splitOption "%1" key val
@@ -39,6 +40,9 @@ $  set examinerOn %val%
 $  IfThenE.examiner_file ((%examinerOn%<>1)and(%examinerOn%<>0)) $abort 'Not a valid examinerOn option. Valid values are [0,1].'
 $  elseIfE.examiner_file %examinerOn%==1 $echo examineGamsPoint 1 > examiner.opt
 $  endIf.examiner_file
+$ elseIfI.qubo_solve__arguments %key%==getQ
+$  set get_Q %val%
+$  ifE (not(sameas('%get_Q%','y'))and(not(sameas('%get_Q%','n')))) $abort 'Wrong flag for >getQ<. Valid options are [y,n]'
 $ else.qubo_solve__arguments
 $  abort Unknown option `%key%`.
 $ endif.qubo_solve__arguments
@@ -47,7 +51,7 @@ $ goTo ProcessNamedArguments
 $label ProcessNamedArgumentsDone
 
 $log *** Options (required):modelName=%modelName%, modelType=%modelType%, objective=%direction%, objectiveVariable=%obj%, penalty=%penalty%
-$log *** Options (optional, all): method=%method%, solver=%solver%, maxIter=%maxIter%, timeLimit=%timeLimit%, numThreads=%num_threads%, logOn=%log_on%, examinerOn=%examinerOn%
+$log *** Options (optional, all): method=%method%, solver=%solver%, maxIter=%maxIter%, timeLimit=%timeLimit%, numThreads=%num_threads%, logOn=%log_on%, examinerOn=%examinerOn%, getQ=%get_Q%
 
 $onEcho > convert.opt
 dumpgdx %modelName%.gdx
@@ -225,7 +229,8 @@ if len(int_vars) != 0:
     int_bin_vals = pd.DataFrame(columns=['intName', 'binName', 'value'])
     for var, bin_bounds in int_to_bin_bounds.items():
         for i in range(len(bin_bounds)): # naming the converted binary vars
-            int_bin_vals = pd.concat([int_bin_vals, pd.DataFrame({'intName': var, 'binName': f"{var}@_bin{i}", 'value': bin_bounds[i]}, index=[0])], ignore_index=True)
+            new_row = pd.DataFrame({'intName': var, 'binName': f"{var}@_bin{i}", 'value': bin_bounds[i]}, index=[0])
+            int_bin_vals = pd.concat([int_bin_vals, new_row], ignore_index=True) if not int_bin_vals.empty else new_row.copy()
     
     binName_list = int_bin_vals['binName'].to_list() # list of all converted binary variable names 
     int_bin_name_map = list(int_bin_vals[['intName', 'binName']].itertuples(index=None, name=None))
@@ -548,6 +553,8 @@ def qubo_to_maxcut(Q: np.array) -> np.array:
 
 ### Section to get the qubo for submitting it to the dwave-hybrid method
 if '%method%' == 'qpu':
+    if '%get_Q%'.lower() == 'y':
+        raise Exception(f"Specify >method=classic< to export Q matrix in CSV files.")
     Q = P_qpu*new_x + newobj # Note: We are always minimizing in the case of qpu and we have already fixed the direction of obj on line 184
     offset = P_qpu*b_vec.T@b_vec + P_qpu*case2_penalty_offset_factor
     logging.debug(f"\nPenaly: {P_qpu} | Total Offset: {offset}")
@@ -565,8 +572,10 @@ elif '%method%' in ['classic', 'sdp']:
     logging.debug(f"\nPenalty: {P} | Total Offset: {const}\n")
     Q = newobj + P*new_x
     #sparsity = 1.0 - (np.count_nonzero(Q) / float(Q.size))
-    #np.savetxt(fr'%modelName%_p{P}_sprs{sparsity}.csv', Q, delimiter=",")
-    # logging.debug("\nFinal Q:\n"+np.array2string(Q))
+    if '%get_Q%'.lower() == 'y':
+        np.savetxt(fr'%modelName%_p{P:.0f}_c{const:.0f}.csv', Q, delimiter=",")
+        logging.debug(f"\nExported Q matrix as >%modelName%_p{P:.0f}_c{const:.0f}.csv<\n")
+        exit(0)
     ### For producing the qs format for QUBOWL
     # non_zero_indices = np.tril_indices_from(Q)
     # non_zero_values = Q[non_zero_indices]

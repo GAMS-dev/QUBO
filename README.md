@@ -49,6 +49,7 @@ Following is the list of optional `-key=val` pair arguments, some of which are m
 10. numThreads, Number of threads to be used in case of a classical solve (default: min(8,num_of_cores) | effective only if `-method=classic`)
 11. logOn, Creates a log for the reformulation [0, 1, 2] (default: 0, don't create a log)
 12. examinerOn, [0, 1] (default: 0) The quality of returned qubo solution w.r.t the original problem can be checked through the use of `examiner` [tool](https://www.gams.com/latest/docs/S_EXAMINER.html).
+13. getQ, [y, n] (default: n) Specify if only the Q-matrix is exported to a CSV file. This will produce a CSV file with the following filename schema, `modelName_p(penalty)_c(total_offset).csv`
 
 Note: Generating the API key and setting up the Python-Dwave Environment is considered to be available when chosen method of solving is `qpu`.
 
