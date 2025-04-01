@@ -1,3 +1,4 @@
+import sys
 import gamspy as gp
 import random as rp
 from qubo import Qubo
@@ -34,11 +35,9 @@ x = gp.Variable(m, name="x", type="binary", domain=i)
 
 obj = gp.Sum(i, a1[i] * x[i])
 
-gp.Equation(m, name="e2", definition=gp.Sum(i, a2[i] * x[i]) <= 25)
-
-gp.Equation(m, name="e3", definition=gp.Sum(i, a3[i] * x[i]) == 21)
-
-gp.Equation(m, name="e4", definition=gp.Sum(i, a4[i] * x[i]) >= 10)
+gp.Equation(m, name="e1", definition=gp.Sum(i, a2[i] * x[i]) <= 25)
+gp.Equation(m, name="e2", definition=gp.Sum(i, a3[i] * x[i]) == 21)
+gp.Equation(m, name="e3", definition=gp.Sum(i, a4[i] * x[i]) >= 10)
 
 zero_one = gp.Model(
     m,
@@ -49,6 +48,25 @@ zero_one = gp.Model(
     objective=obj,
 )
 
-q = Qubo(zero_one, log_on=2)
+# zero_one.solve(solver="CPLEX", output=sys.stdout)
+# print(f"{zero_one.objective_value = }")
 
-q.transform()
+q = Qubo(zero_one)
+# qd, qi, qconst = q.transform()
+# print(qconst.records)
+
+q.solve(solver="CPLEX", options=gp.Options(equation_listing_limit=1))
+
+# q_mat = q.get_q_matrix()
+# print(q_mat.shape)
+
+print(q.getEquationListing())
+print(f"{q.objective_value = } | {q.status = }")
+
+q.transform(penalty=10)
+
+q.solve(solver="CPLEX", options=gp.Options(equation_listing_limit=1))
+
+print(q.getEquationListing())
+print(f"{q.objective_value = } | {q.status = }")
+
