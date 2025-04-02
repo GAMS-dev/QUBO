@@ -51,22 +51,17 @@ zero_one = gp.Model(
 # zero_one.solve(solver="CPLEX", output=sys.stdout)
 # print(f"{zero_one.objective_value = }")
 
-q = Qubo(zero_one)
-# qd, qi, qconst = q.transform()
-# print(qconst.records)
+q = Qubo(zero_one, penalty=10)
 
-q.solve(solver="CPLEX", options=gp.Options(equation_listing_limit=1))
+# qd, qi, qconst = q.transform(penalty=10)
+# h, J, const = q.qubo_to_ising(qd.toDict())
+
+# q.solve(solver="CPLEX", options=gp.Options(equation_listing_limit=1))
+q.solve(solver="CPLEX")
+q.map_solution()
+
+print(f"Original Objective Variable:\n{zero_one._objective_variable.records}")
+print(f"Variable x:\n{x.records}")
 
 # q_mat = q.get_q_matrix()
 # print(q_mat.shape)
-
-print(q.getEquationListing())
-print(f"{q.objective_value = } | {q.status = }")
-
-q.transform(penalty=10)
-
-q.solve(solver="CPLEX", options=gp.Options(equation_listing_limit=1))
-
-print(q.getEquationListing())
-print(f"{q.objective_value = } | {q.status = }")
-

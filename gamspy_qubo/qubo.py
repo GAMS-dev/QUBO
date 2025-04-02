@@ -1,3 +1,4 @@
+import re
 import gamspy as gp
 import logging as log
 import warnings
@@ -21,6 +22,7 @@ class Qubo(gp.Model):
         /,
         name: str = "QUBO",
         problem: str = "MIQCP",
+        working_directory: str = None,
         penalty: int = 1,
         log_on: int = 0,
     ):
@@ -28,17 +30,22 @@ class Qubo(gp.Model):
         if model.__class__.__name__ != "Model":
             raise Exception(f"Qubo() only accepts a >gamspy.Model< object.")
 
-        self._model: gp.Model = model
-        self._modelName: gp.Model = model.name
+        self._og_model: gp.Model = model
+        self._og_modelName: str = model.name
+        self._modelName: str = name
+        self._work_dir: str = (
+            model.container.working_directory
+            if working_directory is None
+            else working_directory
+        )
         self._sense: gp.Sense = model.sense
         self.penalty: gp.Sense = penalty
         # TODO: add other methods
         # self.method: str = validate_value(
         #     method, allowed_values=["classic", "qpu"], param_name="method"
         # )
-        self._container: gp.Container = self._run_convert()
-        self._q_container = gp.Container()
-        self._name = name
+        self._container: gp.Container = self._run_convert(workdir=self._work_dir)
+        self._q_container = gp.Container(working_directory=self._work_dir)
         self._problem_type = problem
 
         if (
@@ -48,7 +55,7 @@ class Qubo(gp.Model):
             )
         ) < log.WARN:
             log.basicConfig(
-                filename=f"{self._modelName}_reformulation.log",
+                filename=f"{self._og_modelName}_reformulation.log",
                 filemode="w",
                 format="%(message)s",
                 level=log_level,
@@ -59,30 +66,62 @@ class Qubo(gp.Model):
 
     def __str__(self) -> str:
         return (
-            f"Model QUBO:\n  Problem Type: MIQCP\n  Sense:"
-            f" {self._sense}\n  Equations: QUBO_objective"
+            f"Model {self._modelName}:\n  Problem Type: {self._problem_type}\n  Sense:"
+            f" {self._sense}\n  Equations: {self._modelName}_objective"
         )
 
-    def _run_convert(self) -> gp.Container:
+    def _run_convert(self, workdir) -> gp.Container:
         try:
-            self._model.solve(
+            self._og_model.solve(
                 solver="CONVERT",
-                solver_options={"dumpgdx": f"{self._modelName}.gdx", "GDXQuadratic": 1},
+                solver_options={
+                    "dumpgdx": f"{self._og_modelName}.gdx",
+                    "GDXQuadratic": 1,
+                },
             )
         except Exception as e:
             raise Exception(
                 f"Error while running the >CONVERT< operation.\nMessage: {e}"
             )
 
-        return gp.Container(load_from=f"{self._modelName}.gdx")
+        return gp.Container(
+            load_from=f"{self._og_modelName}.gdx",
+            working_directory=workdir,
+        )
+
+    @staticmethod
+    def var_contribution(
+        A: pd.DataFrame, vars: dict, cons: Optional[list] = None
+    ) -> np.array:
+        """
+        helper function to calculate the contribution of given variables
+        in a constraint or set of constraints
+
+        Args:
+            A:      df of coefficients
+            vars:   contributing variables
+            cons:   participating constraints
+
+        Returns:
+            np.array of Total contribution of all variables for that constraint
+        """
+        cons = slice(None) if cons is None else cons
+        coeffs_of_vars_in_constraint = A.loc[cons, vars.keys()].to_numpy()
+        lb_var_levels = np.array(list(vars.values())).reshape((len(vars), 1))
+        if coeffs_of_vars_in_constraint.size > 0:
+            return coeffs_of_vars_in_constraint @ lb_var_levels
+
+        return np.array([0])
 
     def transform(self, penalty: int = None):
         if penalty is None:
             penalty = self.penalty
 
-        obj_eq_name: pd.DataFrame = self._container["iobj"].records
+        self._fixed_vars_flag = False
+        self._lower_bounded_vars_flag = False
+        self._obj_eq_name: pd.DataFrame = self._container["iobj"].records
 
-        if obj_eq_name is None:
+        if self._obj_eq_name is None:
             raise Exception(
                 "The objective is not defined using a scalar equation. `iobj` in gdx is empty. Quitting."
             )
@@ -97,7 +136,7 @@ class Qubo(gp.Model):
         eq_data: pd.DataFrame = self._container["e"].records  # fetches equation data
 
         if (
-            raw_a[-raw_a["i"].isin(obj_eq_name["i"].tolist())]["value"]
+            raw_a[-raw_a["i"].isin(self._obj_eq_name["i"].tolist())]["value"]
             .mod(1)
             .sum(axis=0)
             > 0
@@ -130,6 +169,7 @@ class Qubo(gp.Model):
         int_vars = (
             [] if int_vars is None else int_vars["j"].to_list()
         )  # check if any int_vars are present
+        self._int_vars_flag = False if len(int_vars) == 0 else True
         obj_var = obj_var["j"].to_list()
         all_var_vals = self._container[
             "x"
@@ -140,7 +180,7 @@ class Qubo(gp.Model):
         ):  # Continuous variables are not allowed
             raise Exception("There are continuous variables. Quitting.")
 
-        obj_eq_name = obj_eq_name["i"].to_list()
+        self._obj_eq_name = self._obj_eq_name["i"].to_list()
 
         check_quad = self._container["ANL"].records
 
@@ -151,7 +191,7 @@ class Qubo(gp.Model):
         We also need to check if the level of variables are set and handle them separately
         """
 
-        vars_with_lower_bounds = {
+        self._vars_with_lower_bounds = {
             var.j: var.lower
             for _, var in all_var_vals.iterrows()
             if (var.lower > 0) and (var.lower != var.upper)
@@ -161,7 +201,7 @@ class Qubo(gp.Model):
             for _, var in all_var_vals.iterrows()
             if (var.level == var.lower) and (var.level == var.upper)
         }  # check for fixed variables
-        fixed_and_lower_bounds = {**vars_with_lower_bounds, **fixed_vars}
+        fixed_and_lower_bounds = {**self._vars_with_lower_bounds, **fixed_vars}
         sum_fixed_obj_var_coeffs = 0
 
         if check_quad is not None:
@@ -169,7 +209,7 @@ class Qubo(gp.Model):
                 "Q"
             ].records  # fetch quadratic terms from the original problem, if any.
 
-            if len(int_vars) != 0:
+            if self._int_vars_flag:
                 raise Exception(
                     "Quadratic Program with integer variables are not supported."
                 )
@@ -183,51 +223,30 @@ class Qubo(gp.Model):
         log.debug("\nEquation Data: eq_data\n" + eq_data.to_string())
         log.debug("\nVariable Data: all_var_vals\n" + all_var_vals.to_string())
 
-        def var_contribution(
-            A: pd.DataFrame, vars: dict, cons: Optional[list] = None
-        ) -> np.array:
-            """
-            helper function to calculate the contribution of given variables
-            in a constraint or set of constraints
-
-            Args:
-                A:      df of coefficients
-                vars:   contributing variables
-                cons:   participating constraints
-
-            Returns:
-                np.array of Total contribution of all variables for that constraint
-            """
-            cons = slice(None) if cons is None else cons
-            coeffs_of_vars_in_constraint = A.loc[cons, vars.keys()].to_numpy()
-            lb_var_levels = np.array(list(vars.values())).reshape((len(vars), 1))
-            if coeffs_of_vars_in_constraint.size > 0:
-                return coeffs_of_vars_in_constraint @ lb_var_levels
-
-            return np.array([0])
-
         if (
             fixed_and_lower_bounds
         ):  # adjust the rhs of equations when level of variables > 0
             log.info(
-                f"\nList of variables with lower bounds:\n{vars_with_lower_bounds}"
+                f"\nList of variables with lower bounds:\n{self._vars_with_lower_bounds}"
             )
-            contribution = var_contribution(raw_a, fixed_and_lower_bounds)
+            self._lower_bounded_vars_flag = True
+            contribution = self.var_contribution(raw_a, fixed_and_lower_bounds)
             eq_data.loc[:, ["lower", "upper"]] -= contribution
             if fixed_vars:
+                self._fixed_vars_flag = True
                 log.info(f"\nList of Fixed Variables:\n{fixed_vars}")
                 # remove the fixed variables from computation
                 bin_vars = [var for var in bin_vars if var not in fixed_vars]
                 int_vars = [var for var in int_vars if var not in fixed_vars]
                 sum_fixed_obj_var_coeffs += np.ndarray.item(
-                    var_contribution(raw_a, fixed_vars, cons=obj_eq_name)
+                    self.var_contribution(raw_a, fixed_vars, cons=self._obj_eq_name)
                 )
                 raw_a.drop(
                     fixed_vars, axis=1, inplace=True
                 )  # dropping columns from the coefficient matrix
-                fixed_var_vals = all_var_vals[all_var_vals["j"].isin(fixed_vars)].copy(
-                    deep=True
-                )
+                self._fixed_var_vals: pd.DataFrame = all_var_vals[
+                    all_var_vals["j"].isin(fixed_vars)
+                ].copy(deep=True)
 
             log.debug(
                 "\nAfter removing fixed variables and adjusting for non-zero levels: raw_a\n"
@@ -279,10 +298,12 @@ class Qubo(gp.Model):
         If these variables contribute to the objective function, their lower bounds are added as a constant
         """
         sum_lower_bound_of_int_vars = 0
-        if len(int_vars) != 0:
-            if vars_with_lower_bounds:
+        if self._int_vars_flag:
+            if self._vars_with_lower_bounds:
                 sum_lower_bound_of_int_vars += np.ndarray.item(
-                    var_contribution(raw_a, vars_with_lower_bounds, obj_eq_name)
+                    self.var_contribution(
+                        raw_a, self._vars_with_lower_bounds, self._obj_eq_name
+                    )
                 )
 
             int_var_vals = all_var_vals[all_var_vals["j"].isin(int_vars)]
@@ -307,7 +328,7 @@ class Qubo(gp.Model):
                         else new_row.copy()
                     )
 
-            binName_list = int_bin_vals[
+            self._binName_list = int_bin_vals[
                 "binName"
             ].to_list()  # list of all converted binary variable names
             int_bin_name_map = list(
@@ -322,7 +343,10 @@ class Qubo(gp.Model):
                 0
             )  # mapping each binary var to its integer var component
             int_bin_vals = int_bin_vals.reindex(labels=int_vars, axis="index")
-            int_bin_vals = int_bin_vals.reindex(labels=binName_list, axis="columns")
+            int_bin_vals = int_bin_vals.reindex(
+                labels=self._binName_list, axis="columns"
+            )
+            self._int_bin_vals = int_bin_vals
             # int_bin_vals.columns = pd.MultiIndex.from_tuples(int_bin_name_map)
 
             raw_a_int = raw_a[int_vars]
@@ -334,16 +358,18 @@ class Qubo(gp.Model):
                 [raw_a_rest, raw_a_int], axis="columns"
             )  # new "A" coeff matrix
             log.info("\nInteger to Binary Mapping: raw_a\n" + raw_a.to_string())
-            bin_vars += binName_list  # append the list of original binary variables with the list of converted binary variables
+            bin_vars += (
+                self._binName_list
+            )  # append the list of original binary variables with the list of converted binary variables
 
-        cons = eq_data[-eq_data["i"].isin(obj_eq_name)].reset_index(
+        cons = eq_data[-eq_data["i"].isin(self._obj_eq_name)].reset_index(
             drop=True
         )  # fetch only the constrainsts and not the objective equation
         nvars = len(bin_vars)
         nslacks = 0
-        obj_var_direction = raw_a[obj_var].loc[obj_eq_name].to_numpy()
-        obj_var_coeff = raw_a[bin_vars].loc[obj_eq_name].to_numpy()
-        if obj_var_direction > 0:
+        self._obj_var_direction = raw_a[obj_var].loc[self._obj_eq_name].to_numpy()
+        obj_var_coeff = raw_a[bin_vars].loc[self._obj_eq_name].to_numpy()
+        if self._obj_var_direction > 0:
             obj_var_coeff = -1 * obj_var_coeff
         obj = np.zeros((nvars, nvars))
         np.fill_diagonal(obj, obj_var_coeff)
@@ -456,20 +482,24 @@ class Qubo(gp.Model):
             quad = quad.reindex(labels=bin_vars, axis="columns")
             return quad.to_numpy()
 
+        self._quad_val = 0
         if (
             check_quad is not None
         ):  # check if quadratic terms are present in the original problem
             log.debug("\nRaw Q data from GDX: Q\n" + rawquad.to_string())
-            rawquad_obj = rawquad[rawquad["i_0"].isin(obj_eq_name)].copy(deep=True)
+            rawquad_obj = rawquad[rawquad["i_0"].isin(self._obj_eq_name)].copy(
+                deep=True
+            )
             if (
                 len(rawquad_obj.index) != 0
             ):  # check if quadratic terms exist in the objective function
                 rawquad_obj.drop(["i_0"], axis=1, inplace=True)
                 quad = fetch_quadratic_coeff(raw_df=rawquad_obj)
+                self._quad_val = quad
                 sum_fixed_obj_var_coeffs /= 2
 
             rawquad_cons = rawquad[
-                -rawquad["i_0"].isin(obj_eq_name)
+                -rawquad["i_0"].isin(self._obj_eq_name)
             ]  # non-linear constraints without objective equation
             if len(rawquad_cons.index) != 0:  # non-linear constraints exists
                 raise Exception("There are non-linear constraints. Quitting.")
@@ -491,7 +521,7 @@ class Qubo(gp.Model):
 
         if quad is not None:  # add the old quadratic terms/matrix to the new objective
             log.debug("\nUpdate Objective by adding Q: \n" + np.array2string(quad))
-            obj += -1 * quad if obj_var_direction > 0 else quad
+            obj += -1 * quad if self._obj_var_direction > 0 else quad
             log.debug("\nNew Q: \n" + np.array2string(obj))
 
         def modify_matrix(
@@ -606,65 +636,6 @@ class Qubo(gp.Model):
             obj  # define the new objective: Q for the qubo
         )
 
-        def qubo_to_ising(Q: dict, offset: float = 0.0) -> Tuple[dict, dict, float]:
-            """
-            This is the Qubo to Ising Reformulation. Here, the variable X in {-1,1}
-
-            Args:
-                    Q: in a form of dict, {(i,j): val}
-                    offset: offset from the Qubo reformulation
-
-            Returns:
-                    h: the bias vector
-                    J: the coupling matrix
-                    offset: adjusted offset for the Ising model
-            """
-
-            h = {}
-            J = {}
-            linear_offset = 0.0
-            quadratic_offset = 0.0
-
-            for (u, v), bias in Q.items():
-                if u == v:
-                    if u in h:
-                        h[u] += 0.5 * bias
-                    else:
-                        h[u] = 0.5 * bias
-                    linear_offset += bias
-                else:
-                    if bias != 0.0:
-                        J[(u, v)] = 0.25 * bias
-
-                    if u in h:
-                        h[u] += 0.25 * bias
-                    else:
-                        h[u] = 0.25 * bias
-
-                    if v in h:
-                        h[v] += 0.25 * bias
-                    else:
-                        h[v] = 0.25 * bias
-
-                    quadratic_offset += bias
-
-            offset += 0.5 * linear_offset + 0.25 * quadratic_offset
-
-            return h, J, offset
-
-        def qubo_to_maxcut(Q: np.array) -> np.array:
-            """
-            This is the Qubo to Maxcut Reformulation. This can be used for SDP procedures.
-
-            Args:
-                Q: a n x n symmetric numpy matrix
-
-            Returns:
-                n x 1 vector associated with the extra variable required in max cut transformation
-            """
-
-            return -1 * np.sum(Q, axis=1)
-
         ### Section to get the qubo for submitting it to the dwave-hybrid method
         # TODO: if self.method == "qpu": ### Plugin QuSol?
         #     Q = (
@@ -771,6 +742,65 @@ class Qubo(gp.Model):
             #     )
         return qd, qi, qconst
 
+    def qubo_to_ising(self, Q: dict, offset: float = 0.0) -> Tuple[dict, dict, float]:
+        """
+        This is the Qubo to Ising Reformulation. Here, the variable X in {-1,1}
+
+        Args:
+                Q: in a form of dict, {(i,j): val}
+                offset: offset from the Qubo reformulation
+
+        Returns:
+                h: the bias vector \
+                J: the coupling matrix\
+                offset: adjusted offset for the Ising model
+        """
+
+        h = {}
+        J = {}
+        linear_offset = 0.0
+        quadratic_offset = 0.0
+
+        for (u, v), bias in Q.items():
+            if u == v:
+                if u in h:
+                    h[u] += 0.5 * bias
+                else:
+                    h[u] = 0.5 * bias
+                linear_offset += bias
+            else:
+                if bias != 0.0:
+                    J[(u, v)] = 0.25 * bias
+
+                if u in h:
+                    h[u] += 0.25 * bias
+                else:
+                    h[u] = 0.25 * bias
+
+                if v in h:
+                    h[v] += 0.25 * bias
+                else:
+                    h[v] = 0.25 * bias
+
+                quadratic_offset += bias
+
+        offset += 0.5 * linear_offset + 0.25 * quadratic_offset
+
+        return h, J, offset
+
+    def qubo_to_maxcut(self, Q: np.array) -> np.array:
+        """
+        This is the Qubo to Maxcut Reformulation. This can be used for SDP procedures.
+
+        Args:
+            Q: a n x n symmetric numpy matrix
+
+        Returns:
+            n x 1 vector associated with the extra variable required in max cut transformation
+        """
+
+        return -1 * np.sum(Q, axis=1)
+
     def write_gdx(self, gdxName: str = None):
         if gdxName:
             self._q_container.write(gdxName)
@@ -791,7 +821,7 @@ class Qubo(gp.Model):
                 f"Symbol `qd` not yet present in the Container. Either use .transform() or .solve() to generate the symbol."
             )
 
-    def model(self):
+    def _model(self):
         try:
             qd, qi, qconst = self._q_container.getSymbols(["qd", "qi", "qconst"])
         except Exception as e:
@@ -815,7 +845,7 @@ class Qubo(gp.Model):
 
         return super().__init__(
             container=self._q_container,
-            name=self._name,
+            name=self._modelName,
             problem=self._problem_type,
             sense=self._sense,
             objective=qubo_obj,
@@ -826,10 +856,173 @@ class Qubo(gp.Model):
         if "qd" not in self._q_container.data:
             self.transform()
 
-        if f"{self._name}_objective" not in self._q_container.data:
-            self.model()
+        if f"{self._modelName}_objective" not in self._q_container.data:
+            self._model()
 
         try:
             return super().solve(*args, **kwargs)
         except Exception as e:
             raise Exception(f"Something went wrong while solving QUBO.\nMessage: {e}")
+
+    def map_solution(self) -> None:
+        """
+        This function maps the QUBO solution to the original Problem
+        """
+        if getattr(super(), "solve_status", None) is None:
+            raise Exception(f"Solution does not exist in the Container.")
+
+        elif super().solve_status.value != 1:
+            raise Exception(f"Solver did not yield NormalCompletion.")
+
+        obj_var_coeff = self._q_container[
+            f"{self._modelName}_objective_variable"
+        ].records
+        obj_var = self._container["jobj"].records["j"].values[0]
+
+        all_vars = self._container["j"].records
+        original_obj_sym = self._og_model._objective_variable.name
+
+        rem_syms = all_vars[all_vars["uni"] != obj_var]["uni"].to_list()
+        optimized_vals = self._q_container["x"].records
+
+        if self._fixed_vars_flag:
+            self._fixed_var_vals.rename({"j": "i"}, axis=1, inplace=True)
+            optimized_vals = pd.concat(
+                [optimized_vals, self._fixed_var_vals], ignore_index=True
+            )
+
+        if self._int_vars_flag:
+            # check if integer variable exist. If yes, combine and merge the solution of converted binary variables to their integer representation
+            int_bin_vals_unstack = self._int_bin_vals.unstack().reset_index()
+            int_bin_vals_unstack.drop(
+                int_bin_vals_unstack[int_bin_vals_unstack[0] == 0].index, inplace=True
+            )
+            bin_to_int_vals = pd.merge(
+                int_bin_vals_unstack,
+                optimized_vals,
+                how="left",
+                left_on="binName",
+                right_on="i",
+            )
+            bin_to_int_vals["final_level"] = (
+                bin_to_int_vals[0] * bin_to_int_vals["level"]
+            )
+            bin_to_int_vals = (
+                bin_to_int_vals.groupby("intName")["final_level"].sum().reset_index()
+            )
+
+            original_int_vals = self._container["x"].records
+            original_int_vals = original_int_vals[
+                original_int_vals["j"].isin(bin_to_int_vals["intName"])
+            ].copy(deep=True)
+            original_int_vals = pd.merge(
+                original_int_vals,
+                bin_to_int_vals,
+                left_on="j",
+                right_on="intName",
+                how="left",
+            )
+            original_int_vals.drop(["level", "intName"], axis=1, inplace=True)
+            original_int_vals.rename(
+                {"j": "i", "final_level": "level"}, axis=1, inplace=True
+            )
+            original_int_vals = original_int_vals[
+                ["i", "level", "marginal", "lower", "upper", "scale"]
+            ]
+
+            optimized_vals.drop(
+                optimized_vals[optimized_vals.i.isin(self._binName_list)].index,
+                inplace=True,
+            )
+            optimized_vals = pd.concat(
+                [optimized_vals, original_int_vals], ignore_index=True
+            )
+            if self._vars_with_lower_bounds:
+                optimized_vals.loc[
+                    optimized_vals["i"].isin(self._vars_with_lower_bounds.keys()),
+                    "level",
+                ] += list(self._vars_with_lower_bounds.values())
+
+        mapper = {}
+        for (
+            _,
+            ele,
+        ) in all_vars.iterrows():  # extract the domain and symbols from the gdx
+            domain = re.findall(r"\((.*?)\)", ele["element_text"])
+            var_sym = re.findall(r"(.+)(?=\()", ele["element_text"])
+            if len(domain) > 0:
+                domain = domain[0].strip(r"\'")
+                if var_sym[0] not in mapper:
+                    mapper[var_sym[0]] = {ele["uni"]: domain}
+                else:
+                    mapper[var_sym[0]][ele["uni"]] = domain
+
+        for vars, ele in mapper.items():
+            newsol = optimized_vals[optimized_vals["i"].isin(ele.keys())].copy(
+                deep=True
+            )
+            newsol["i"] = newsol["i"].map(ele)
+            newsol.rename(columns={"i": "QUBO_label"}, inplace=True)
+
+            newsol = newsol[
+                ["QUBO_label", "level", "marginal", "lower", "upper", "scale"]
+            ]
+            split_labels = newsol["QUBO_label"].str.split(",", expand=True)
+            split_labels.columns = [
+                dom if isinstance(dom, str) else dom.name
+                for dom in self._og_model.container[vars].domain
+            ]
+            newsol = pd.concat([split_labels, newsol], axis=1)
+            newsol.drop(["QUBO_label"], axis=1, inplace=True)
+            newsol[split_labels.columns] = newsol[split_labels.columns].astype(
+                "category"
+            )
+            self._og_model.container[vars].records = newsol.reset_index(drop=True)
+
+        # TODO: Can a scalar model be generated with GAMSPy? Is it possible
+        # if len(mapper) == 0:  # support for flat gms file
+        #     opt_list = optimized_vals.copy(deep=True)
+        #     opt_list.drop(["i"], axis=1, inplace=True)
+        #     flat_var_mapping = all_vars.set_index("uni")["element_text"].to_dict()
+        #     for key, val in flat_var_mapping.items():
+        #         if val != original_obj_sym:
+        #             gams.set(
+        #                 val,
+        #                 list(
+        #                     opt_list.iloc[
+        #                         optimized_vals[optimized_vals["i"] == key].index
+        #                     ].itertuples(index=None, name=None)
+        #                 ),
+        #             )
+
+        """
+        The code below is required to calculate the contribution of variables towards the objective using the new levels obtained from the QUBO solve.
+        Since the QUBO solve returns a different level for the objective variable when the optimal solution is not returned, for example, it includes the penalty for every constraint not satisfied.
+        """
+        x_l = optimized_vals[optimized_vals["i"].isin(rem_syms)]["level"].to_numpy()
+        orig_syms_w_new_levels = (
+            optimized_vals[optimized_vals["i"].isin(rem_syms)]
+            .set_index("i")["level"]
+            .to_dict()
+        )
+        # at the moment `quad` only contains contribution from the objective row.
+        quad_contribution = x_l.T @ self._quad_val @ x_l if self._quad_val > 0 else 0
+        orig_jacobian = self._container["A"].records  # A coefficients
+        orig_jacobian = orig_jacobian.pivot(
+            index="i", columns="j", values="value"
+        ).fillna(
+            0
+        )  # arranging in a matrix
+        linear_contribution = self.var_contribution(
+            orig_jacobian, orig_syms_w_new_levels, cons=self._obj_eq_name
+        ).flatten()[0]
+        total_objective_contribution = linear_contribution + quad_contribution
+        total_objective_contribution = (
+            -1 * total_objective_contribution
+            if self._obj_var_direction > 0
+            else total_objective_contribution
+        )
+        obj_var_coeff.loc[0, "level"] = total_objective_contribution
+        self._og_model.container[original_obj_sym].records = obj_var_coeff.reset_index(
+            drop=True
+        )
