@@ -860,18 +860,17 @@ class Qubo(gp.Model):
             self._model()
 
         try:
-            return super().solve(*args, **kwargs)
+            solved = super().solve(*args, **kwargs)
+            self._map_solution()
+            return solved
         except Exception as e:
             raise Exception(f"Something went wrong while solving QUBO.\nMessage: {e}")
 
-    def map_solution(self) -> None:
+    def _map_solution(self) -> None:
         """
         This function maps the QUBO solution to the original Problem
         """
-        if getattr(super(), "solve_status", None) is None:
-            raise Exception(f"Solution does not exist in the Container.")
-
-        elif super().solve_status.value != 1:
+        if super().solve_status.value != 1:
             raise Exception(f"Solver did not yield NormalCompletion.")
 
         obj_var_coeff = self._q_container[
@@ -1006,7 +1005,7 @@ class Qubo(gp.Model):
             .to_dict()
         )
         # at the moment `quad` only contains contribution from the objective row.
-        quad_contribution = x_l.T @ self._quad_val @ x_l if self._quad_val > 0 else 0
+        quad_contribution = x_l.T @ self._quad_val @ x_l if isinstance(self._quad_val, np.ndarray) else 0
         orig_jacobian = self._container["A"].records  # A coefficients
         orig_jacobian = orig_jacobian.pivot(
             index="i", columns="j", values="value"

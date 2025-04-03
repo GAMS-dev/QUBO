@@ -58,7 +58,6 @@ q = Qubo(zero_one, penalty=10)
 
 # q.solve(solver="CPLEX", options=gp.Options(equation_listing_limit=1))
 q.solve(solver="CPLEX")
-q.map_solution()
 
 print(f"Original Objective Variable:\n{zero_one._objective_variable.records}")
 print(f"Variable x:\n{x.records}")
