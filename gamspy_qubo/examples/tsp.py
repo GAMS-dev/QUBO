@@ -74,11 +74,11 @@ tsp = gp.Model(
     objective=total_cost,
 )
 
-tsp.solve(
-    solver="CPLEX",
-    output=sys.stdout,
-    options=gp.Options(hold_fixed_variables=True),
-)
+# tsp.solve(
+#     solver="CPLEX",
+#     output=sys.stdout,
+#     options=gp.Options(hold_fixed_variables=True),
+# )
 
 q = Qubo(tsp, penalty=10)
 

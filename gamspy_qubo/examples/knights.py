@@ -28,17 +28,19 @@ from gamspy_qubo import Qubo
 
 m = gp.Container(working_directory="./workdir")
 
+SIZE = 8
+
 i = gp.Set(
     m,
     name="i",
-    records=[f"{i}" for i in range(1, 9)],
+    records=[f"{i}" for i in range(1, SIZE + 1)],
     description="size of board",
 )
 
 n = gp.Set(
     m,
     name="n",
-    records=[f"m{i}" for i in range(1, 9)],
+    records=[f"m{i}" for i in range(1, SIZE + 1)],
     description="number of possible moves",
 )
 
@@ -46,21 +48,20 @@ j = gp.Alias(m, name="j", alias_with=i)
 k = gp.Alias(m, name="k", alias_with=i)
 d = gp.Set(m, name="d", records=["H", "V"])
 
+move_recs = np.array(
+    [
+        # m1 m2 m3 m4 m5 m6 m7 m8
+        [-2, -2, -1, -1, +1, +1, +2, +2],  # H
+        [-1, +1, -2, +2, -2, +2, -1, +1],  # V
+    ]
+)
+
 move = gp.Parameter(
     m,
     name="move",
     domain=[d, n],
     description="all possible knight moves",
-)
-
-move.setRecords(
-    np.array(
-        [
-            # m1 m2 m3 m4 m5 m6 m7 m8
-            [-2, -2, -1, -1, +1, +1, +2, +2],  # H
-            [-1, +1, -2, +2, -2, +2, -1, +1],  # V
-        ]
-    )
+    records=move_recs[:, :SIZE],
 )
 
 total = gp.Variable(m, name="total")
@@ -96,25 +97,20 @@ knightx = gp.Model(
     objective=total,
 )
 
-
-knight.solve(
-    solver="CPLEX",
-    output=sys.stdout,
-    options=gp.Options(
-        relative_optimality_gap=0, absolute_optimality_gap=0.999, time_limit=60
-    ),
+solver_options = gp.Options(
+    relative_optimality_gap=0, absolute_optimality_gap=0.999, time_limit=10
 )
 
-print(x.pivot())
+# knight.solve(
+#     solver="CPLEX",
+#     output=sys.stdout,
+#     options=solver_options,
+# )
 
-q = Qubo(knight, penalty=10)
+q = Qubo(knightx, penalty=10)
 
-q.solve(
-    options=gp.Options(
-        relative_optimality_gap=0, absolute_optimality_gap=0.999, time_limit=60
-    )
-)
+q.solve(options=solver_options)
 
-print(f"Original Objective Variable:\n{knight._objective_variable.records}")
+print(f"Original Objective Variable:\n{knightx._objective_variable.records}")
 print(f"Variable x:\n{x.records}")
 print(f"Variable total:\n{total.records}")
