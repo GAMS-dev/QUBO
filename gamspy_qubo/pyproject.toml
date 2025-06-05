@@ -9,6 +9,7 @@ description = "A GAMSPy implemention of classic GAMS-QUBO reformulation."
 authors = [
   { name = "GAMS Development Corporation", email = "support@gams.com" },
 ]
+readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
   "gamspy >= 1.11.0"
