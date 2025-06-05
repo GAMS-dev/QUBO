@@ -77,6 +77,7 @@ class Qubo(gp.Model):
                 solver_options={
                     "dumpgdx": f"{self._og_modelName}.gdx",
                     "GDXQuadratic": 1,
+                    "GDXHessian": 1,
                 },
             )
         except Exception as e:
@@ -812,8 +813,8 @@ class Qubo(gp.Model):
         Convenient method to get the Q matrix as numpy array
         """
         try:
-            qd: gp.Parameter = self._q_container.getSymbols("qd")[0]
-            qd = qd.records.pivot(index="qi_0", columns="qi_1", values="value")
+            qd: pd.DataFrame = self._q_container["qd"].records
+            qd = qd.pivot(index="qi_0", columns="qi_1", values="value")
 
             return qd.to_numpy()
         except KeyError as e:
@@ -1005,7 +1006,11 @@ class Qubo(gp.Model):
             .to_dict()
         )
         # at the moment `quad` only contains contribution from the objective row.
-        quad_contribution = x_l.T @ self._quad_val @ x_l if isinstance(self._quad_val, np.ndarray) else 0
+        quad_contribution = (
+            x_l.T @ self._quad_val @ x_l
+            if isinstance(self._quad_val, np.ndarray)
+            else 0
+        )
         orig_jacobian = self._container["A"].records  # A coefficients
         orig_jacobian = orig_jacobian.pivot(
             index="i", columns="j", values="value"
@@ -1025,3 +1030,14 @@ class Qubo(gp.Model):
         self._og_model.container[original_obj_sym].records = obj_var_coeff.reset_index(
             drop=True
         )
+
+    def check_convexity(self):
+        q = self.get_q_matrix()        
+        eigenvalues = np.linalg.eigvals(q)
+
+        if np.all(eigenvalues > 0):
+            return "Function is strictly convex."
+        elif np.all(eigenvalues >= 0):
+            return "Function is convex."
+        else:
+            return "Function is not convex."
