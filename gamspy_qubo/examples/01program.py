@@ -1,7 +1,7 @@
 import sys
 import gamspy as gp
 import random as rp
-from gamspy_qubo.src.gamspy_qubo.qubo import Qubo
+from gamspy_qubo import Qubo
 
 rp.seed(42)
 

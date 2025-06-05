@@ -1,7 +1,7 @@
 import sys
 import gamspy as gp
 import pandas as pd
-from gamspy_qubo.src.gamspy_qubo.qubo import Qubo
+from gamspy_qubo import Qubo
 
 m = gp.Container(working_directory="./workdir")
 
