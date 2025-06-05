@@ -867,7 +867,13 @@ class Qubo(gp.Model):
         """
         This function maps the QUBO solution to the original Problem
         """
-        if super().solve_status.value != 1:
+        solveStatus = super().solve_status
+
+        if solveStatus.value in [2,3,5,8]:
+            # Continue mapping incumbant solution if solve_status is one of *Interrupt.
+            pass
+        
+        elif solveStatus.value != 1:
             raise Exception("Solver did not yield NormalCompletion.")
 
         obj_var_coeff = self._q_container[
