@@ -28,7 +28,7 @@ class Qubo(gp.Model):
     ):
 
         if model.__class__.__name__ != "Model":
-            raise Exception(f"Qubo() only accepts a >gamspy.Model< object.")
+            raise Exception("Qubo() only accepts a >gamspy.Model< object.")
 
         self._og_model: gp.Model = model
         self._og_modelName: str = model.name
@@ -332,9 +332,6 @@ class Qubo(gp.Model):
             self._binName_list = int_bin_vals[
                 "binName"
             ].to_list()  # list of all converted binary variable names
-            int_bin_name_map = list(
-                int_bin_vals[["intName", "binName"]].itertuples(index=None, name=None)
-            )
             log.info(
                 "\nInteger to Binary Mapping: int_bin_vals\n" + int_bin_vals.to_string()
             )
@@ -348,7 +345,6 @@ class Qubo(gp.Model):
                 labels=self._binName_list, axis="columns"
             )
             self._int_bin_vals = int_bin_vals
-            # int_bin_vals.columns = pd.MultiIndex.from_tuples(int_bin_name_map)
 
             raw_a_int = raw_a[int_vars]
             raw_a_int = raw_a_int.dot(
@@ -817,9 +813,9 @@ class Qubo(gp.Model):
             qd = qd.pivot(index="qi_0", columns="qi_1", values="value")
 
             return qd.to_numpy()
-        except KeyError as e:
+        except KeyError:
             raise Exception(
-                f"Symbol `qd` not yet present in the Container. Either use .transform() or .solve() to generate the symbol."
+                "Symbol `qd` not yet present in the Container. Either use .transform() or .solve() to generate the symbol."
             )
 
     def _model(self):
@@ -872,7 +868,7 @@ class Qubo(gp.Model):
         This function maps the QUBO solution to the original Problem
         """
         if super().solve_status.value != 1:
-            raise Exception(f"Solver did not yield NormalCompletion.")
+            raise Exception("Solver did not yield NormalCompletion.")
 
         obj_var_coeff = self._q_container[
             f"{self._modelName}_objective_variable"
