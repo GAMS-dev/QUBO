@@ -6,7 +6,7 @@
 
 ```bash
 git clone git@git.gams.com:devel/qubo.git
-cd qubo
+cd qubo/gamspy_qubo
 ```
 
 ### 2. Create and activate a virtual environment
