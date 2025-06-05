@@ -80,9 +80,9 @@ tsp = gp.Model(
 #     options=gp.Options(hold_fixed_variables=True),
 # )
 
-q = Qubo(tsp, penalty=10)
+q = Qubo(tsp, penalty=10, options=gp.Options(hold_fixed_variables=True))
 
-q.solve(options=gp.Options(hold_fixed_variables=True))
+q.solve()
 
 print(f"Original Objective Variable:\n{tsp._objective_variable.records}")
 print(f"Variable x:\n{x.records}")

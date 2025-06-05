@@ -25,6 +25,7 @@ class Qubo(gp.Model):
         working_directory: str = None,
         penalty: int = 1,
         log_on: int = 0,
+        **kwargs,
     ):
 
         if model.__class__.__name__ != "Model":
@@ -44,7 +45,7 @@ class Qubo(gp.Model):
         # self.method: str = validate_value(
         #     method, allowed_values=["classic", "qpu"], param_name="method"
         # )
-        self._container: gp.Container = self._run_convert(workdir=self._work_dir)
+        self._container: gp.Container = self._run_convert(workdir=self._work_dir, **kwargs)
         self._q_container = gp.Container(working_directory=self._work_dir)
         self._problem_type = problem
 
@@ -70,7 +71,7 @@ class Qubo(gp.Model):
             f" {self._sense}\n  Equations: {self._modelName}_objective"
         )
 
-    def _run_convert(self, workdir) -> gp.Container:
+    def _run_convert(self, workdir, **kwargs) -> gp.Container:
         try:
             self._og_model.solve(
                 solver="CONVERT",
@@ -79,6 +80,7 @@ class Qubo(gp.Model):
                     "GDXQuadratic": 1,
                     "GDXHessian": 1,
                 },
+                **kwargs
             )
         except Exception as e:
             raise Exception(
