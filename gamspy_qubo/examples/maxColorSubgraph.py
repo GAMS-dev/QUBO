@@ -57,7 +57,7 @@ mcs = gp.Model(
 
 q = Qubo(mcs, penalty=10)
 
-q.solve(solver="CPLEX", options=gp.Options(iteration_limit=60))
+q.solve(solver="CPLEX", options=gp.Options(time_limit=60))
 
 print(f"Original Objective Variable:\n{mcs._objective_variable.records}")
 print(f"Variable x:\n{x.records}")
