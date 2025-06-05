@@ -14,15 +14,15 @@ cd qubo/gamspy_qubo
 #### macOS / Linux:
 
 ```bash
-python3 -m venv .gamspy_qubo
-source .gamspy_qubo/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 #### Windows:
 
 ```bash
-python -m venv .gamspy_qubo
-.gamspy_qubo\Scripts\activate
+python -m venv .venv
+.venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
