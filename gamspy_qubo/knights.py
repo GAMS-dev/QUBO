@@ -23,7 +23,7 @@ Keywords: mixed integer linear programming, maximum knights problem, mathematics
 
 import sys
 import gamspy as gp
-import pandas as pd
+import numpy as np
 from qubo import Qubo
 
 m = gp.Container(working_directory="./workdir")
@@ -44,35 +44,23 @@ n = gp.Set(
 
 j = gp.Alias(m, name="j", alias_with=i)
 k = gp.Alias(m, name="k", alias_with=i)
-
-
-moves_data = pd.DataFrame(
-    [
-        ("H", "m1", -2),
-        ("H", "m2", -2),
-        ("H", "m3", -1),
-        ("H", "m4", -1),
-        ("H", "m5", 1),
-        ("H", "m6", 1),
-        ("H", "m7", 2),
-        ("H", "m8", 2),
-        ("V", "m1", -1),
-        ("V", "m2", 1),
-        ("V", "m3", -2),
-        ("V", "m4", 2),
-        ("V", "m5", -2),
-        ("V", "m6", 2),
-        ("V", "m7", -1),
-        ("V", "m8", 1),
-    ]
-)
+d = gp.Set(m, name="d", records=["H", "V"])
 
 move = gp.Parameter(
     m,
     name="move",
-    domain=["*", n],
-    records=moves_data,
+    domain=[d, n],
     description="all possible knight moves",
+)
+
+move.setRecords(
+    np.array(
+        [
+            # m1 m2 m3 m4 m5 m6 m7 m8
+            [-2, -2, -1, -1, +1, +1, +2, +2],  # H
+            [-1, +1, -2, +2, -2, +2, -1, +1],  # V
+        ]
+    )
 )
 
 total = gp.Variable(m, name="total")
@@ -116,6 +104,8 @@ knight.solve(
         relative_optimality_gap=0, absolute_optimality_gap=0.999, time_limit=60
     ),
 )
+
+print(x.pivot())
 
 q = Qubo(knight, penalty=10)
 
