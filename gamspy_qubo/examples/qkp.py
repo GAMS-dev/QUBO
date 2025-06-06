@@ -48,7 +48,7 @@ qkp = gp.Model(
 
 q = Qubo(qkp, penalty=10)
 
-q.solve()
+q.solve(solver="CPLEX")
 
 print(f"Original Objective Variable:\n{qkp._objective_variable.records}")
 print(f"Variable x:\n{x.records}")

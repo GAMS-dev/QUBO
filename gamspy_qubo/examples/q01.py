@@ -9,7 +9,6 @@ since x_1 is binary.
 
 import sys
 import gamspy as gp
-import pandas as pd
 from gamspy_qubo import Qubo
 
 m = gp.Container(working_directory="./workdir")
@@ -60,7 +59,7 @@ quadZeroOne = gp.Model(
 
 q = Qubo(quadZeroOne, penalty=10)
 
-q.solve()
+q.solve(solver="CPLEX")
 
 print(f"Original Objective Variable:\n{quadZeroOne._objective_variable.records}")
 print(f"Variable x:\n{x.records}")

@@ -82,7 +82,7 @@ tsp = gp.Model(
 
 q = Qubo(tsp, penalty=10, options=gp.Options(hold_fixed_variables=True))
 
-q.solve()
+q.solve(solver="CPLEX")
 
 print(f"Original Objective Variable:\n{tsp._objective_variable.records}")
 print(f"Variable x:\n{x.records}")
