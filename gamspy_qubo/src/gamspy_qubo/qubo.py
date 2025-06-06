@@ -16,6 +16,30 @@ def validate_value(value, allowed_values, param_name):
 
 
 class Qubo(gp.Model):
+    """
+    QUBO Reformulation for Integer Programs (IPs) modelled in GAMSPy.
+
+    Parameters
+    ----------
+    model: gp.Model
+        GAMSPy generated IP Model.
+    name: str | None
+        Name for the reformulated model. By default it is "QUBO"
+    problem: str | None
+        Problem type. By default it is "MIQCP"
+    penalty: int | None
+        Set the appropriate penalty to be used to penalize the constraints. By default it is 1
+    log_on: int | None
+        Enable logging information.
+        Options are {0 = WARN, 1 = INFO, 2 = DEBUG}.
+        By default it is 0.
+
+    Notes
+    -----
+    We first use the `CONVERT` solver to generate a standardized version of the original problem.
+    One can also pass keyword arguments to the `CONVERT` solver, for. e.g., `options=gp.Options(hold_fixed_variables=True)`
+    """
+
     def __init__(
         self,
         model: gp.Model,
@@ -27,8 +51,7 @@ class Qubo(gp.Model):
         log_on: int = 0,
         **kwargs,
     ):
-
-        if model.__class__.__name__ != "Model":
+        if not isinstance(model, gp.Model):
             raise Exception("Qubo() only accepts a >gamspy.Model< object.")
 
         self._og_model: gp.Model = model
@@ -45,8 +68,13 @@ class Qubo(gp.Model):
         # self.method: str = validate_value(
         #     method, allowed_values=["classic", "qpu"], param_name="method"
         # )
-        self._container: gp.Container = self._run_convert(workdir=self._work_dir, **kwargs)
+        self._container: gp.Container = self._run_convert(
+            workdir=self._work_dir, **kwargs
+        )
         self._q_container = gp.Container(working_directory=self._work_dir)
+        self.Q: np.ndarray = None
+        self.Qconst: float = None
+        self._TRANSFORMATION_COMPLETE = False
         self._problem_type = problem
 
         if (
@@ -80,7 +108,7 @@ class Qubo(gp.Model):
                     "GDXQuadratic": 1,
                     "GDXHessian": 1,
                 },
-                **kwargs
+                **kwargs,
             )
         except Exception as e:
             raise Exception(
@@ -116,7 +144,13 @@ class Qubo(gp.Model):
 
         return np.array([0])
 
-    def transform(self, penalty: int = None):
+    def _check_transformation(self):
+        if not self._TRANSFORMATION_COMPLETE:
+            raise Exception("Run transform first to generate the Q Matrix.")
+
+    def transform(
+        self, penalty: int = None
+    ) -> Tuple[gp.Parameter, gp.Set, gp.Parameter]:
         if penalty is None:
             penalty = self.penalty
 
@@ -174,9 +208,9 @@ class Qubo(gp.Model):
         )  # check if any int_vars are present
         self._int_vars_flag = False if len(int_vars) == 0 else True
         obj_var = obj_var["j"].to_list()
-        all_var_vals = self._container[
-            "x"
-        ].records  # get all variable values, viz., [level, marginal, lower, upper, scale]
+        all_var_vals = (
+            self._container["x"].records
+        )  # get all variable values, viz., [level, marginal, lower, upper, scale]
 
         if (
             len(all_vars) - len(bin_vars) - len(int_vars) != 1
@@ -339,9 +373,7 @@ class Qubo(gp.Model):
             )
             int_bin_vals = int_bin_vals.pivot(
                 index="intName", columns="binName", values="value"
-            ).fillna(
-                0
-            )  # mapping each binary var to its integer var component
+            ).fillna(0)  # mapping each binary var to its integer var component
             int_bin_vals = int_bin_vals.reindex(labels=int_vars, axis="index")
             int_bin_vals = int_bin_vals.reindex(
                 labels=self._binName_list, axis="columns"
@@ -357,9 +389,7 @@ class Qubo(gp.Model):
                 [raw_a_rest, raw_a_int], axis="columns"
             )  # new "A" coeff matrix
             log.info("\nInteger to Binary Mapping: raw_a\n" + raw_a.to_string())
-            bin_vars += (
-                self._binName_list
-            )  # append the list of original binary variables with the list of converted binary variables
+            bin_vars += self._binName_list  # append the list of original binary variables with the list of converted binary variables
 
         cons = eq_data[-eq_data["i"].isin(self._obj_eq_name)].reset_index(
             drop=True
@@ -570,7 +600,6 @@ class Qubo(gp.Model):
         b_vec = np.array([])
         log.info("\nFinal Cons: \n" + cons.to_string())
         for _, ele in cons.iterrows():
-
             if ele.upper == ele.lower:  # equal-to type constraint
                 rhs = ele.lower
                 lhs_min_lb, lhs_max_ub = get_lhs_bounds(A_coeff.loc[ele.i])
@@ -614,7 +643,7 @@ class Qubo(gp.Model):
         logging_a_mat = logging_a_mat[logging_a_mat[0] != 0]
         log.debug("\nFinal coefficient matrix: \n" + logging_a_mat.to_string())
         log.debug(f"\nFinal RHS: \n{b_vec}")
-        log.debug(f"Constant RHS term: {b_vec.T@b_vec}")
+        log.debug(f"Constant RHS term: {b_vec.T @ b_vec}")
         log.debug(f"Case 2 Offset Penalty Factor: {case2_penalty_offset_factor}")
         log.debug(
             f"Fixed Variable contribution to Objective Function: {sum_fixed_obj_var_coeffs}"
@@ -657,25 +686,16 @@ class Qubo(gp.Model):
 
         ### Section to solve the qubo using miqcp
         # TODO: if self.method in ["classic", "sdp"]:
-        const = (
+        self.Qconst = (
             P * b_vec.T @ b_vec
             + P * case2_penalty_offset_factor
             + sum_fixed_obj_var_coeffs
             + sum_lower_bound_of_int_vars
         )
-        log.debug(f"\nPenalty: {P} | Total Offset: {const}\n")
-        Q = newobj + P * new_x
-        # sparsity = 1.0 - (np.count_nonzero(Q) / float(Q.size))
-        ### For producing the qs format for QUBOWL
-        # non_zero_indices = np.tril_indices_from(Q)
-        # non_zero_values = Q[non_zero_indices]
-        # with open('QMat_{self._modelName}.qs', 'w') as f:
-        #     f.write(f"{Q.shape[0]} {len(non_zero_values)} {const}\n")
-        #     for i, j, value in zip(*non_zero_indices, non_zero_values):
-        #         if value != 0:
-        #             f.write(f"{i+1} {j+1} {value}\n")
+        log.debug(f"\nPenalty: {P} | Total Offset: {self.Qconst}\n")
+        self.Q = newobj + P * new_x
         Qdf = pd.DataFrame(
-            Q, columns=list(A_coeff.columns), index=list(A_coeff.columns)
+            self.Q, columns=list(A_coeff.columns), index=list(A_coeff.columns)
         )
         Qdf = Qdf.unstack()
         Qdf = Qdf.reset_index()
@@ -685,7 +705,7 @@ class Qubo(gp.Model):
             self._q_container,
             "qconst",
             None,
-            const,
+            self.Qconst,
             description="Constant term to offset the objective value to original",
         )
         if Qdf:
@@ -739,6 +759,7 @@ class Qubo(gp.Model):
             #     raise Exception(
             #         "All variables are fixed. Q matrix is Empty. Quitting SDP SOLVE."
             #     )
+        self._TRANSFORMATION_COMPLETE = True
         return qd, qi, qconst
 
     def qubo_to_ising(self, Q: dict, offset: float = 0.0) -> Tuple[dict, dict, float]:
@@ -806,19 +827,22 @@ class Qubo(gp.Model):
         else:
             self._q_container.write(f"qout_{self._modelName}.gdx")
 
-    def get_q_matrix(self) -> np.ndarray:
+    def write_qubowl(self) -> None:
         """
-        Convenient method to get the Q matrix as numpy array
-        """
-        try:
-            qd: pd.DataFrame = self._q_container["qd"].records
-            qd = qd.pivot(index="qi_0", columns="qi_1", values="value")
+        Convenient method to produce QUBO in QUBOWL ready file format (.qs)
 
-            return qd.to_numpy()
-        except KeyError:
-            raise Exception(
-                "Symbol `qd` not yet present in the Container. Either use .transform() or .solve() to generate the symbol."
-            )
+        Returns:
+                A QMat_<modelName>.qs file accepted by QUBOWL.
+        """
+        self._check_transformation()
+
+        non_zero_indices = np.tril_indices_from(self.Q)
+        non_zero_values = self.Q[non_zero_indices]
+        with open(f"QMat_{self._modelName}.qs", "w") as fp:
+            fp.write(f"{self.Q.shape[0]} {len(non_zero_values)} {self.Qconst}\n")
+            for i, j, value in zip(*non_zero_indices, non_zero_values):
+                if value != 0:
+                    fp.write(f"{i + 1} {j + 1} {value}\n")
 
     def _model(self):
         try:
@@ -851,8 +875,7 @@ class Qubo(gp.Model):
         )
 
     def solve(self, *args, **kwargs):
-
-        if "qd" not in self._q_container.data:
+        if not self._TRANSFORMATION_COMPLETE:
             self.transform()
 
         if f"{self._modelName}_objective" not in self._q_container.data:
@@ -871,10 +894,10 @@ class Qubo(gp.Model):
         """
         solveStatus = super().solve_status
 
-        if solveStatus.value in [2,3,5,8]:
+        if solveStatus.value in [2, 3, 5, 8]:
             # Continue mapping incumbant solution if solve_status is one of *Interrupt.
             pass
-        
+
         elif solveStatus.value != 1:
             raise Exception("Solver did not yield NormalCompletion.")
 
@@ -1018,9 +1041,7 @@ class Qubo(gp.Model):
         orig_jacobian = self._container["A"].records  # A coefficients
         orig_jacobian = orig_jacobian.pivot(
             index="i", columns="j", values="value"
-        ).fillna(
-            0
-        )  # arranging in a matrix
+        ).fillna(0)  # arranging in a matrix
         linear_contribution = self.var_contribution(
             orig_jacobian, orig_syms_w_new_levels, cons=self._obj_eq_name
         ).flatten()[0]
@@ -1036,8 +1057,8 @@ class Qubo(gp.Model):
         )
 
     def check_convexity(self):
-        q = self.get_q_matrix()        
-        eigenvalues = np.linalg.eigvals(q)
+        self._check_transformation()
+        eigenvalues = np.linalg.eigvals(self.Q)
 
         if np.all(eigenvalues > 0):
             return "Function is strictly convex."
@@ -1045,3 +1066,7 @@ class Qubo(gp.Model):
             return "Function is convex."
         else:
             return "Function is not convex."
+
+    @property
+    def qubo(self):
+        return self.Q
