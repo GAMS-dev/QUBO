@@ -15,6 +15,11 @@ dependencies = [
   "gamspy >= 1.11.0"
 ]
 
+[project.optional-dependencies]
+test = [
+  "pytest >= 8.4.1",
+]
+
 [project.urls]
 repository = "https://github.com/GAMS-dev/qubo"
 

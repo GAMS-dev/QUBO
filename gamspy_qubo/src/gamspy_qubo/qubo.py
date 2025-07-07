@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from typing import Tuple, Optional
 
+from gamspy.exceptions import ValidationError
+
 LOG_LEVEL_DICT = {0: log.WARN, 1: log.INFO, 2: log.DEBUG}
 
 
@@ -52,7 +54,7 @@ class Qubo(gp.Model):
         **kwargs,
     ):
         if not isinstance(model, gp.Model):
-            raise Exception("Qubo() only accepts a >gamspy.Model< object.")
+            raise ValidationError("Qubo() only accepts a >gamspy.Model< object.")
 
         self._og_model: gp.Model = model
         self._og_modelName: str = model.name
@@ -159,7 +161,7 @@ class Qubo(gp.Model):
         self._obj_eq_name: pd.DataFrame = self._container["iobj"].records
 
         if self._obj_eq_name is None:
-            raise Exception(
+            raise ValidationError(
                 "The objective is not defined using a scalar equation. `iobj` in gdx is empty. Quitting."
             )
 
@@ -178,7 +180,7 @@ class Qubo(gp.Model):
             .sum(axis=0)
             > 0
         ):  # floating point coeffs in objective function is accepted
-            raise Exception(
+            raise ValidationError(
                 "Reformulation with Non-Integer Coefficients not possible. Quitting."
             )
 
@@ -215,7 +217,7 @@ class Qubo(gp.Model):
         if (
             len(all_vars) - len(bin_vars) - len(int_vars) != 1
         ):  # Continuous variables are not allowed
-            raise Exception("There are continuous variables. Quitting.")
+            raise ValidationError("There are continuous variables. Quitting.")
 
         self._obj_eq_name = self._obj_eq_name["i"].to_list()
 
@@ -320,7 +322,7 @@ class Qubo(gp.Model):
                 if var_range=5, then gen_slacks(5) returns [1, 2, 2]
             """
             if var_range >= 1e4:
-                raise Exception(
+                raise ValidationError(
                     "The Upper bound is greater than or equal to 1e+4, Quitting!"
                 )
 
@@ -531,7 +533,7 @@ class Qubo(gp.Model):
                 -rawquad["i_0"].isin(self._obj_eq_name)
             ]  # non-linear constraints without objective equation
             if len(rawquad_cons.index) != 0:  # non-linear constraints exists
-                raise Exception("There are non-linear constraints. Quitting.")
+                raise ValidationError("There are non-linear constraints. Quitting.")
 
                 ### Removed the support for quadratic constraints.
                 # mask = rawquad_cons['j_1'].astype(str) == rawquad_cons['j_2'].astype(str)
@@ -604,7 +606,7 @@ class Qubo(gp.Model):
                 rhs = ele.lower
                 lhs_min_lb, lhs_max_ub = get_lhs_bounds(A_coeff.loc[ele.i])
                 if (rhs - lhs_min_lb) < 0 or (lhs_max_ub - rhs) < 0:
-                    raise Exception(f"Constraint is infeasible: {ele.i}")
+                    raise ValidationError(f"Constraint is infeasible: {ele.i}")
                 else:
                     b_vec = np.append(b_vec, [rhs])
                     slacks = []  # do not introduce slacks for equality type constraints
@@ -622,7 +624,7 @@ class Qubo(gp.Model):
                     b_vec = np.append(b_vec, [rhs])
                     slacks = []
                 else:
-                    raise Exception(f"Constraint is infeasible: {ele.i}")
+                    raise ValidationError(f"Constraint is infeasible: {ele.i}")
 
             else:  # less-than type constraint
                 rhs = ele.upper
@@ -637,7 +639,7 @@ class Qubo(gp.Model):
                     b_vec = np.append(b_vec, [rhs])
                     slacks = []
                 else:
-                    raise Exception(f"Constraint is infeasible: {ele.i}")
+                    raise ValidationError(f"Constraint is infeasible: {ele.i}")
 
         logging_a_mat = A_coeff.unstack().reset_index()
         logging_a_mat = logging_a_mat[logging_a_mat[0] != 0]
