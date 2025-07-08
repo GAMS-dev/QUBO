@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 import gamspy as gp
-from gamspy import Container, ModelStatus
+from gamspy import Container
 from gamspy_qubo import Qubo
 
 from gamspy.exceptions import ValidationError
@@ -103,33 +103,6 @@ def test_qubo_nonscalar_objective(data):
     )
 
 
-def test_qubo_nonscalar_objective(data):
-    m, i, x, c1, _, z = data
-
-    ind_obj = gp.Equation(m, "ind_eqn", domain=[i])
-    ind_obj[...] = x[...] == z
-
-    c1[...] = gp.Sum(i, x) == 1
-
-    test1 = gp.Model(
-        m,
-        name="test1",
-        problem="MIP",
-        equations=[c1, ind_obj],
-        sense=gp.Sense.MAX,
-        objective=z,
-    )
-
-    qubo = Qubo(test1, penalty=1)
-
-    with pytest.raises(ValidationError) as e:
-        qubo.transform()
-    assert (
-        "The objective is not defined using a scalar equation. `iobj` in gdx is empty. Quitting."
-        in str(e.value)
-    )
-
-
 def test_qubo_infeasible_constraint(data):
     m, i, x, c1, obj, z = data
 
@@ -148,10 +121,7 @@ def test_qubo_infeasible_constraint(data):
     qubo = Qubo(test1, penalty=1)
     with pytest.raises(ValidationError) as e1:
         qubo.transform()
-    assert (
-        "Constraint is infeasible: e1"
-        in str(e1.value)
-    )
+    assert "Constraint is infeasible: e1" in str(e1.value)
 
     c1[...] = gp.Sum(i, x) <= -10
 
@@ -167,10 +137,7 @@ def test_qubo_infeasible_constraint(data):
     qubo = Qubo(test1, penalty=1)
     with pytest.raises(ValidationError) as e2:
         qubo.transform()
-    assert (
-        "Constraint is infeasible: e1"
-        in str(e2.value)
-    )
+    assert "Constraint is infeasible: e1" in str(e2.value)
 
     c1[...] = gp.Sum(i, x) >= 10
 
@@ -186,10 +153,8 @@ def test_qubo_infeasible_constraint(data):
     qubo = Qubo(test1, penalty=1)
     with pytest.raises(ValidationError) as e3:
         qubo.transform()
-    assert (
-        "Constraint is infeasible: e1"
-        in str(e3.value)
-    )
+    assert "Constraint is infeasible: e1" in str(e3.value)
+
 
 def test_qubo_upper_bound_variable(data):
     m, i, _, c1, obj, z = data
@@ -212,10 +177,10 @@ def test_qubo_upper_bound_variable(data):
     qubo = Qubo(test1, penalty=1)
     with pytest.raises(ValidationError) as e1:
         qubo.transform()
-    assert (
-        "The Upper bound is greater than or equal to 1e+4, Quitting!"
-        in str(e1.value)
+    assert "The Upper bound is greater than or equal to 1e+4, Quitting!" in str(
+        e1.value
     )
+
 
 def test_qubo_nonlinear_constraint(data):
     m, i, x, _, obj, z = data
@@ -224,8 +189,8 @@ def test_qubo_nonlinear_constraint(data):
 
     obj[...] = gp.Sum(i, x) == z
 
-    nonlinear_cons = gp.Equation(m, "c2")   
-    nonlinear_cons[...] = gp.Sum((i,j), x[i]*x[j] ) >= 2
+    nonlinear_cons = gp.Equation(m, "c2")
+    nonlinear_cons[...] = gp.Sum((i, j), x[i] * x[j]) >= 2
 
     test1 = gp.Model(
         m,
@@ -239,7 +204,142 @@ def test_qubo_nonlinear_constraint(data):
     qubo = Qubo(test1, penalty=1)
     with pytest.raises(ValidationError) as e1:
         qubo.transform()
+    assert "There are non-linear constraints. Quitting." in str(e1.value)
+
+
+def test_qubo_int_var_in_qp(data):
+    m, i, x, _, obj, z = data
+
+    j = gp.Alias(m, "j", alias_with=i)
+    y = gp.Variable(m, "int_var", domain=[i], type="integer")
+
+    obj[...] = gp.Sum(i, x + y) == z
+
+    qp_cons = gp.Equation(m, "c3")
+    qp_cons[...] = gp.Sum((i, j), x[i] * x[j] + y[i]) >= 2
+
+    test1 = gp.Model(
+        m,
+        name="test1",
+        problem="MIQCP",
+        equations=[qp_cons, obj],
+        sense=gp.Sense.MAX,
+        objective=z,
+    )
+
+    qubo = Qubo(test1, penalty=1)
+    with pytest.raises(ValidationError) as e1:
+        qubo.transform()
+    assert "Quadratic Program with integer variables are not supported." in str(
+        e1.value
+    )
+
+
+def test_qubo_nonzero_var_levels_in_qp(data):
+    m, i, x, _, obj, z = data
+
+    j = gp.Alias(m, "j", alias_with=i)
+    x.fx["2"] = 1
+
+    obj[...] = gp.Sum(i, x) == z
+
+    qp_cons = gp.Equation(m, "c4")
+    qp_cons[...] = gp.Sum((i, j), x[i] * x[j]) >= 2
+
+    test1 = gp.Model(
+        m,
+        name="test1",
+        problem="MIQCP",
+        equations=[qp_cons, obj],
+        sense=gp.Sense.MAX,
+        objective=z,
+    )
+
+    qubo = Qubo(test1, penalty=1)
+    with pytest.raises(ValidationError) as e1:
+        qubo.transform()
     assert (
-        "There are non-linear constraints. Quitting."
+        "Quadratic terms with non-zero variable levels are not supported at the moment."
         in str(e1.value)
     )
+
+
+def test_qubo_noninteger_rhs(data):
+    m, i, x, _, obj, z = data
+
+    obj[...] = gp.Sum(i, x) == z
+
+    real_cons = gp.Equation(m, "c4")
+    real_cons[...] = gp.Sum(i, x[i]) >= 2.5
+
+    test1 = gp.Model(
+        m,
+        name="test1",
+        problem="MIQCP",
+        equations=[real_cons, obj],
+        sense=gp.Sense.MAX,
+        objective=z,
+    )
+
+    qubo = Qubo(test1, penalty=1)
+    with pytest.raises(ValidationError) as e1:
+        qubo.transform()
+    assert "Reformulation with Non-Integer RHS not possible. Quitting." in str(e1.value)
+
+
+def test_qubo_check_convexity(data):
+    m, i, x, _, obj, z = data
+
+    obj[...] = gp.Sum(i, x) == z
+
+    qp_cons = gp.Equation(m, "c4")
+    qp_cons[...] = gp.Sum(i, x[i]) <= 4
+
+    test1 = gp.Model(
+        m,
+        name="test1",
+        problem="MIQCP",
+        equations=[qp_cons, obj],
+        sense=gp.Sense.MIN,
+        objective=z,
+    )
+
+    test_qubo = Qubo(test1, penalty=1)
+    test_qubo.transform()
+
+    new_q = np.array([[2, -1], [-1, 2]])
+
+    assert "Function is not convex." in test_qubo.check_convexity(test_qubo.qubo)
+    assert "Function is strictly convex." in test_qubo.check_convexity(new_q)
+
+
+def test_qubo_valid_solution(data):
+    m, i, x, c1, obj, z = data
+
+    np.random.seed(42)
+    cost = gp.Parameter(
+        m,
+        "cost",
+        domain=[i],
+        records=[(i, np.random.randint(1, 10)) for i in range(1, 6)],
+    )
+
+    obj[...] = gp.Sum(i, cost[i] * x[i]) == z
+
+    c1[...] = gp.Sum(i, x[i]) <= 3
+
+    test1 = gp.Model(
+        m,
+        name="test1",
+        problem="MIP",
+        equations=[c1, obj],
+        sense=gp.Sense.MAX,
+        objective=z,
+    )
+
+    test_qubo = Qubo(test1, penalty=10)
+    test_qubo.solve(solver="CPLEX")
+
+    assert 22 == test_qubo.objective_value, "Objective value is wrong."
+    assert 22 == z.l.records, "Mapped Objective value is wrong."
+    assert 3 == sum(x.toDense().flatten()), "Variable Assignment is wrong."

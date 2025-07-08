@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from typing import Tuple, Optional
 
-from gamspy.exceptions import ValidationError
+from gamspy.exceptions import ValidationError, GamspyException
 
 LOG_LEVEL_DICT = {0: log.WARN, 1: log.INFO, 2: log.DEBUG}
 
@@ -66,10 +66,6 @@ class Qubo(gp.Model):
         )
         self._sense: gp.Sense = model.sense
         self.penalty: gp.Sense = penalty
-        # TODO: add other methods
-        # self.method: str = validate_value(
-        #     method, allowed_values=["classic", "qpu"], param_name="method"
-        # )
         self._container: gp.Container = self._run_convert(
             workdir=self._work_dir, **kwargs
         )
@@ -113,7 +109,7 @@ class Qubo(gp.Model):
                 **kwargs,
             )
         except Exception as e:
-            raise Exception(
+            raise GamspyException(
                 f"Error while running the >CONVERT< operation.\nMessage: {e}"
             )
 
@@ -148,7 +144,7 @@ class Qubo(gp.Model):
 
     def _check_transformation(self):
         if not self._TRANSFORMATION_COMPLETE:
-            raise Exception("Run transform first to generate the Q Matrix.")
+            raise ValidationError("Run transform first to generate the Q Matrix.")
 
     def transform(
         self, penalty: int = None
@@ -192,7 +188,7 @@ class Qubo(gp.Model):
             eq_data["lower"].mod(1).sum(axis=0) > 0
             or eq_data["upper"].mod(1).sum(axis=0) > 0
         ):
-            raise Exception(
+            raise ValidationError(
                 "Reformulation with Non-Integer RHS not possible. Quitting."
             )
 
@@ -249,12 +245,12 @@ class Qubo(gp.Model):
             ].records  # fetch quadratic terms from the original problem, if any.
 
             if self._int_vars_flag:
-                raise Exception(
+                raise ValidationError(
                     "Quadratic Program with integer variables are not supported."
                 )
 
             if any(check_quad["j"].isin(fixed_and_lower_bounds.keys())):
-                raise Exception(
+                raise ValidationError(
                     "Quadratic terms with non-zero variable levels are not supported at the moment."
                 )
 
@@ -472,16 +468,7 @@ class Qubo(gp.Model):
 
         is_max = True if self._sense == gp.Sense.MAX else False
         P = -1 * penalty if is_max else penalty  # penalty term for classic solvers
-        # P_qpu = penalty  # penalty term for qpu, since we always going to minimize the qubo using qpu no treatment is required
-
-        # if self.method == "classic":
         obj += P * final_special_penalty
-        # else:
-        #     obj = (
-        #         P_qpu * final_special_penalty - obj
-        #         if is_max
-        #         else P_qpu * final_special_penalty + obj
-        #     )  # Here, we update the obj and fix the direction to always Minimize for 'qpu'
 
         cons.drop(cons[cons["i"].isin(final_special_cons)].index, axis=0, inplace=True)
         raw_a.drop(final_special_cons, axis=0, inplace=True)
@@ -534,21 +521,8 @@ class Qubo(gp.Model):
             ]  # non-linear constraints without objective equation
             if len(rawquad_cons.index) != 0:  # non-linear constraints exists
                 raise ValidationError("There are non-linear constraints. Quitting.")
-
                 ### Removed the support for quadratic constraints.
-                # mask = rawquad_cons['j_1'].astype(str) == rawquad_cons['j_2'].astype(str)
-                # filtered_quad = rawquad_cons.loc[mask, :].reset_index(drop=True)
-                # if len(filtered_quad.index) == len(rawquad_cons.index): # if pair-wise quadratic terms are not present, i.e., only terms like x1*x1 and not x1*x2
-                #     filtered_quad.drop(['j_2'], axis=1, inplace=True)
-                #     filtered_quad['value'] /= 2
-                #     filtered_quad = filtered_quad.pivot(index='i_0', columns='j_1', values='value').fillna(0)
-                #     if len(filtered_quad.columns) != len(bin_vars):
-                #         remain_cols = [var for var in bin_vars if var not in set(filtered_quad.columns)]
-                #         filtered_quad[remain_cols] = 0
-                #         filtered_quad = filtered_quad[bin_vars]
-                #     A_coeff.loc[filtered_quad.index] += filtered_quad.loc[filtered_quad.index].values
-                # else: # if pair-wise quadratic terms present, i.e., x1*x2. Quit
-                #     raise Exception("There are non-linear constraints. Quitting.")
+                
 
         if quad is not None:  # add the old quadratic terms/matrix to the new objective
             log.debug("\nUpdate Objective by adding Q: \n" + np.array2string(quad))
@@ -666,28 +640,6 @@ class Qubo(gp.Model):
             obj  # define the new objective: Q for the qubo
         )
 
-        ### Section to get the qubo for submitting it to the dwave-hybrid method
-        # TODO: if self.method == "qpu": ### Plugin QuSol?
-        #     Q = (
-        #         P_qpu * new_x + newobj
-        #     )  # Note: We are always minimizing in the case of qpu and we have already fixed the direction of obj on line 184
-        #     offset = P_qpu * b_vec.T @ b_vec + P_qpu * case2_penalty_offset_factor
-        #     log.debug(f"\nPenaly: {P_qpu} | Total Offset: {offset}")
-        #     if Q.size > 0:
-        #         Qdf = pd.DataFrame(
-        #             Q, columns=list(A_coeff.columns), index=list(A_coeff.columns)
-        #         )
-        #         Qdf = Qdf.unstack()
-        #         Qdf = Qdf.reset_index()
-        #         Qdf_dict = {
-        #             (row["level_0"], row["level_1"]): row[0]
-        #             for _, row in Qdf.iterrows()
-        #         }
-        #     else:
-        #         Qdf_dict = {}
-
-        ### Section to solve the qubo using miqcp
-        # TODO: if self.method in ["classic", "sdp"]:
         self.Qconst = (
             P * b_vec.T @ b_vec
             + P * case2_penalty_offset_factor
@@ -724,25 +676,6 @@ class Qubo(gp.Model):
                 records=Qdf,
                 description="Q matrix",
             )
-            # TODO: add method = sdp if required
-            # if self.method == "sdp":
-            #     max_cut_var = qubo_to_maxcut(Q)
-            #     gp.Parameter(
-            #         self._q_container,
-            #         "c_sun",
-            #         [qi],
-            #         records=list(zip(A_coeff.columns, max_cut_var)),
-            #         description="extra variable for max cut transformation, ",
-            #     )
-            # else:
-            max_cut_var = np.zeros((len(A_coeff.columns), 1))
-            gp.Parameter(
-                self._q_container,
-                "c_sun",
-                [qi],
-                records=list(zip(A_coeff.columns, max_cut_var)),
-                description="extra variable for max cut transformation, all set to zero since SDP method is not chosen.",
-            )
         else:
             qi = gp.Set(
                 self._q_container,
@@ -757,71 +690,9 @@ class Qubo(gp.Model):
                 records=[("all_variables_fixed", "all_variables_fixed", 0)],
                 description="Q matrix",
             )
-            # if self.method == "sdp":
-            #     raise Exception(
-            #         "All variables are fixed. Q matrix is Empty. Quitting SDP SOLVE."
-            #     )
+
         self._TRANSFORMATION_COMPLETE = True
         return qd, qi, qconst
-
-    def qubo_to_ising(self, Q: dict, offset: float = 0.0) -> Tuple[dict, dict, float]:
-        """
-        This is the Qubo to Ising Reformulation. Here, the variable X in {-1,1}
-
-        Args:
-                Q: in a form of dict, {(i,j): val}
-                offset: offset from the Qubo reformulation
-
-        Returns:
-                h: the bias vector \
-                J: the coupling matrix\
-                offset: adjusted offset for the Ising model
-        """
-
-        h = {}
-        J = {}
-        linear_offset = 0.0
-        quadratic_offset = 0.0
-
-        for (u, v), bias in Q.items():
-            if u == v:
-                if u in h:
-                    h[u] += 0.5 * bias
-                else:
-                    h[u] = 0.5 * bias
-                linear_offset += bias
-            else:
-                if bias != 0.0:
-                    J[(u, v)] = 0.25 * bias
-
-                if u in h:
-                    h[u] += 0.25 * bias
-                else:
-                    h[u] = 0.25 * bias
-
-                if v in h:
-                    h[v] += 0.25 * bias
-                else:
-                    h[v] = 0.25 * bias
-
-                quadratic_offset += bias
-
-        offset += 0.5 * linear_offset + 0.25 * quadratic_offset
-
-        return h, J, offset
-
-    def qubo_to_maxcut(self, Q: np.array) -> np.array:
-        """
-        This is the Qubo to Maxcut Reformulation. This can be used for SDP procedures.
-
-        Args:
-            Q: a n x n symmetric numpy matrix
-
-        Returns:
-            n x 1 vector associated with the extra variable required in max cut transformation
-        """
-
-        return -1 * np.sum(Q, axis=1)
 
     def write_gdx(self, gdxName: str = None):
         if gdxName:
@@ -850,7 +721,7 @@ class Qubo(gp.Model):
         try:
             qd, qi, qconst = self._q_container.getSymbols(["qd", "qi", "qconst"])
         except Exception as e:
-            raise Exception(
+            raise GamspyException(
                 f"Something went from while fetching the q symbols.\nMessage: {e}"
             )
 
@@ -888,7 +759,7 @@ class Qubo(gp.Model):
             self._map_solution()
             return solved
         except Exception as e:
-            raise Exception(f"Something went wrong while solving QUBO.\nMessage: {e}")
+            raise GamspyException(f"Something went wrong while solving QUBO.\nMessage: {e}")
 
     def _map_solution(self) -> None:
         """
@@ -901,7 +772,7 @@ class Qubo(gp.Model):
             pass
 
         elif solveStatus.value != 1:
-            raise Exception("Solver did not yield NormalCompletion.")
+            raise GamspyException("Solver did not yield NormalCompletion.")
 
         obj_var_coeff = self._q_container[
             f"{self._modelName}_objective_variable"
@@ -1008,22 +879,6 @@ class Qubo(gp.Model):
             )
             self._og_model.container[vars].records = newsol.reset_index(drop=True)
 
-        # TODO: Can a scalar model be generated with GAMSPy? Is it possible
-        # if len(mapper) == 0:  # support for flat gms file
-        #     opt_list = optimized_vals.copy(deep=True)
-        #     opt_list.drop(["i"], axis=1, inplace=True)
-        #     flat_var_mapping = all_vars.set_index("uni")["element_text"].to_dict()
-        #     for key, val in flat_var_mapping.items():
-        #         if val != original_obj_sym:
-        #             gams.set(
-        #                 val,
-        #                 list(
-        #                     opt_list.iloc[
-        #                         optimized_vals[optimized_vals["i"] == key].index
-        #                     ].itertuples(index=None, name=None)
-        #                 ),
-        #             )
-
         """
         The code below is required to calculate the contribution of variables towards the objective using the new levels obtained from the QUBO solve.
         Since the QUBO solve returns a different level for the objective variable when the optimal solution is not returned, for example, it includes the penalty for every constraint not satisfied.
@@ -1058,16 +913,79 @@ class Qubo(gp.Model):
             drop=True
         )
 
-    def check_convexity(self):
-        self._check_transformation()
-        eigenvalues = np.linalg.eigvals(self.Q)
+    @staticmethod
+    def check_convexity(Q: np.ndarray) -> str:
+        """
+        Convenience method to check the convexity of the QUBO using eigenvalues
+        """
+        eigenvalues = np.linalg.eigvals(Q)
 
         if np.all(eigenvalues > 0):
             return "Function is strictly convex."
         elif np.all(eigenvalues >= 0):
             return "Function is convex."
         else:
-            return "Function is not convex."
+            return "Function is not convex." 
+    
+    @staticmethod
+    def qubo_to_ising(Q: dict, offset: float = 0.0) -> Tuple[dict, dict, float]:
+        """
+        This is the Qubo to Ising Reformulation. Here, the variable X in {-1,1}
+
+        Args:
+                Q: in a form of dict, {(i,j): val}
+                offset: offset from the Qubo reformulation
+
+        Returns:
+                h: the bias vector \
+                J: the coupling matrix\
+                offset: adjusted offset for the Ising model
+        """
+        h = {}
+        J = {}
+        linear_offset = 0.0
+        quadratic_offset = 0.0
+
+        for (u, v), bias in Q.items():
+            if u == v:
+                if u in h:
+                    h[u] += 0.5 * bias
+                else:
+                    h[u] = 0.5 * bias
+                linear_offset += bias
+            else:
+                if bias != 0.0:
+                    J[(u, v)] = 0.25 * bias
+
+                if u in h:
+                    h[u] += 0.25 * bias
+                else:
+                    h[u] = 0.25 * bias
+
+                if v in h:
+                    h[v] += 0.25 * bias
+                else:
+                    h[v] = 0.25 * bias
+
+                quadratic_offset += bias
+
+        offset += 0.5 * linear_offset + 0.25 * quadratic_offset
+
+        return h, J, offset
+
+    @staticmethod
+    def qubo_to_maxcut(Q: np.ndarray) -> np.ndarray:
+        """
+        This is the Qubo to Maxcut Reformulation. This can be used for SDP procedures.
+
+        Args:
+            Q: a n x n symmetric numpy matrix
+
+        Returns:
+            n x 1 vector associated with the extra variable required in max cut transformation
+        """
+
+        return -1 * np.sum(Q, axis=1)
 
     @property
     def qubo(self):
