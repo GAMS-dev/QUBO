@@ -71,15 +71,14 @@ Or run example scripts:
 python examples/qap.py
 ```
 
-<!-- TODO: Add tests
-# 🧪 Run Tests
+## Run Tests
 
-If tests are included:
+There are tests available that can be run using the `pytest` package. You can install it via,
 
 ```bash
-pip install pytest
-pytest
-``` -->
+pip install -e .[test]
+```
+The tests can then be run via `pytest test_qubo.py`
 
 ## Build the Package (optional)
 
@@ -95,8 +94,3 @@ Artifacts will be available in the `dist/` directory.
 ## Classic GAMS-QUBO Reformulation tool
 
 For information about the classic tool, please read [here](../README.md).
-
-<!-- TODO: We probably need to add a separate license here.
-## 📃 License
-
-MIT License or your preferred license. -->
