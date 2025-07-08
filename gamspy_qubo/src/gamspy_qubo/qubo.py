@@ -11,7 +11,7 @@ from gamspy.exceptions import ValidationError, GamspyException
 LOG_LEVEL_DICT = {0: log.WARN, 1: log.INFO, 2: log.DEBUG}
 
 
-def validate_value(value, allowed_values, param_name):
+def validate_value(value: int, allowed_values: list, param_name: str) -> int:
     if value not in allowed_values:
         raise ValueError(f"{param_name} must be one of {allowed_values}")
     return value
@@ -121,7 +121,7 @@ class Qubo(gp.Model):
     @staticmethod
     def var_contribution(
         A: pd.DataFrame, vars: dict, cons: Optional[list] = None
-    ) -> np.array:
+    ) -> np.ndarray:
         """
         helper function to calculate the contribution of given variables
         in a constraint or set of constraints
@@ -132,7 +132,7 @@ class Qubo(gp.Model):
             cons:   participating constraints
 
         Returns:
-            np.array of Total contribution of all variables for that constraint
+            np.ndarray of Total contribution of all variables for that constraint
         """
         cons = slice(None) if cons is None else cons
         coeffs_of_vars_in_constraint = A.loc[cons, vars.keys()].to_numpy()
@@ -304,7 +304,7 @@ class Qubo(gp.Model):
                 eq_data[eq_data["i"].isin(redundant_cons)].index, axis=0, inplace=True
             )
 
-        def gen_slacks(var_range: float) -> np.array:
+        def gen_slacks(var_range: float) -> np.ndarray:
             """
             helper function to generate slacks depending on the range of variables or rhs
 
@@ -477,7 +477,7 @@ class Qubo(gp.Model):
 
         quad = None
 
-        def fetch_quadratic_coeff(raw_df: pd.DataFrame) -> np.array:
+        def fetch_quadratic_coeff(raw_df: pd.DataFrame) -> np.ndarray:
             """
             helper function to convert the original Q matrix of the problem to a symmetric matrix
 
@@ -522,7 +522,6 @@ class Qubo(gp.Model):
             if len(rawquad_cons.index) != 0:  # non-linear constraints exists
                 raise ValidationError("There are non-linear constraints. Quitting.")
                 ### Removed the support for quadratic constraints.
-                
 
         if quad is not None:  # add the old quadratic terms/matrix to the new objective
             log.debug("\nUpdate Objective by adding Q: \n" + np.array2string(quad))
@@ -530,13 +529,13 @@ class Qubo(gp.Model):
             log.debug("\nNew Q: \n" + np.array2string(obj))
 
         def modify_matrix(
-            b_vec: np.array,
+            b_vec: np.ndarray,
             rhs: float,
-            slacks: np.array,
+            slacks: np.ndarray,
             A_coeff: pd.DataFrame,
             ele: pd.Series,
             nslacks: int,
-        ) -> Tuple[np.array, pd.DataFrame, int]:
+        ) -> Tuple[np.ndarray, pd.DataFrame, int]:
             """
             helper function to update the original "A" matrix of coeffs
 
@@ -717,7 +716,7 @@ class Qubo(gp.Model):
                 if value != 0:
                     fp.write(f"{i + 1} {j + 1} {value}\n")
 
-    def _model(self):
+    def _model(self) -> gp.Model:
         try:
             qd, qi, qconst = self._q_container.getSymbols(["qd", "qi", "qconst"])
         except Exception as e:
@@ -747,7 +746,7 @@ class Qubo(gp.Model):
             objective=qubo_obj,
         )
 
-    def solve(self, *args, **kwargs):
+    def solve(self, *args, **kwargs) -> pd.DataFrame:
         if not self._TRANSFORMATION_COMPLETE:
             self.transform()
 
@@ -759,7 +758,9 @@ class Qubo(gp.Model):
             self._map_solution()
             return solved
         except Exception as e:
-            raise GamspyException(f"Something went wrong while solving QUBO.\nMessage: {e}")
+            raise GamspyException(
+                f"Something went wrong while solving QUBO.\nMessage: {e}"
+            )
 
     def _map_solution(self) -> None:
         """
@@ -774,7 +775,7 @@ class Qubo(gp.Model):
         elif solveStatus.value != 1:
             raise GamspyException("Solver did not yield NormalCompletion.")
 
-        obj_var_coeff = self._q_container[
+        obj_var_coeff: pd.DataFrame = self._q_container[
             f"{self._modelName}_objective_variable"
         ].records
         obj_var = self._container["jobj"].records["j"].values[0]
@@ -895,7 +896,7 @@ class Qubo(gp.Model):
             if isinstance(self._quad_val, np.ndarray)
             else 0
         )
-        orig_jacobian = self._container["A"].records  # A coefficients
+        orig_jacobian: pd.DataFrame = self._container["A"].records  # A coefficients
         orig_jacobian = orig_jacobian.pivot(
             index="i", columns="j", values="value"
         ).fillna(0)  # arranging in a matrix
@@ -925,8 +926,8 @@ class Qubo(gp.Model):
         elif np.all(eigenvalues >= 0):
             return "Function is convex."
         else:
-            return "Function is not convex." 
-    
+            return "Function is not convex."
+
     @staticmethod
     def qubo_to_ising(Q: dict, offset: float = 0.0) -> Tuple[dict, dict, float]:
         """
