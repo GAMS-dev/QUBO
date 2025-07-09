@@ -4,7 +4,6 @@ import logging as log
 import warnings
 import numpy as np
 import pandas as pd
-from typing import Tuple, Optional
 
 from gamspy.exceptions import ValidationError, GamspyException
 
@@ -27,8 +26,6 @@ class Qubo(gp.Model):
         GAMSPy generated IP Model.
     name: str | None
         Name for the reformulated model. By default it is "QUBO"
-    problem: str | None
-        Problem type. By default it is "MIQCP"
     penalty: int | None
         Set the appropriate penalty to be used to penalize the constraints. By default it is 1
     log_on: int | None
@@ -47,8 +44,6 @@ class Qubo(gp.Model):
         model: gp.Model,
         /,
         name: str = "QUBO",
-        problem: str = "MIQCP",
-        working_directory: str = None,
         penalty: int = 1,
         log_on: int = 0,
         **kwargs,
@@ -59,11 +54,7 @@ class Qubo(gp.Model):
         self._og_model: gp.Model = model
         self._og_modelName: str = model.name
         self._modelName: str = name
-        self._work_dir: str = (
-            model.container.working_directory
-            if working_directory is None
-            else working_directory
-        )
+        self._work_dir: str = model.container.working_directory
         self._sense: gp.Sense = model.sense
         self.penalty: int = penalty
         self._container: gp.Container = self._run_convert(
@@ -73,7 +64,6 @@ class Qubo(gp.Model):
         self.Q: np.ndarray = None
         self.Qconst: float = None
         self._TRANSFORMATION_COMPLETE = False
-        self._problem_type = problem
 
         if (
             log_level := LOG_LEVEL_DICT.get(
@@ -119,7 +109,7 @@ class Qubo(gp.Model):
         )
 
     @staticmethod
-    def var_contribution(
+    def _var_contribution(
         A: pd.DataFrame, vars: dict, cons: list | None = None
     ) -> np.ndarray:
         """
@@ -149,6 +139,17 @@ class Qubo(gp.Model):
     def transform(
         self, penalty: int = None
     ) -> tuple[gp.Parameter, gp.Set, gp.Parameter]:
+        """
+        Method to perform the QUBO reformulation on the provided model.
+
+        Arguments:
+            penalty: different penalty can be provided again to generate a new QUBO.
+
+        Returns:
+            qd: gp.Parameter: the Q Matrix
+            qi: gp.Set: binary variables participating in the QUBO
+            qconst: gp.Parameter: the offset calcluated based on the penalty provided.
+        """
         if penalty is None:
             penalty = self.penalty
 
@@ -265,7 +266,7 @@ class Qubo(gp.Model):
                 f"\nList of variables with lower bounds:\n{self._vars_with_lower_bounds}"
             )
             self._lower_bounded_vars_flag = True
-            contribution = self.var_contribution(raw_a, fixed_and_lower_bounds)
+            contribution = self._var_contribution(raw_a, fixed_and_lower_bounds)
             eq_data.loc[:, ["lower", "upper"]] -= contribution
             if fixed_vars:
                 self._fixed_vars_flag = True
@@ -274,7 +275,7 @@ class Qubo(gp.Model):
                 bin_vars = [var for var in bin_vars if var not in fixed_vars]
                 int_vars = [var for var in int_vars if var not in fixed_vars]
                 sum_fixed_obj_var_coeffs += np.ndarray.item(
-                    self.var_contribution(raw_a, fixed_vars, cons=self._obj_eq_name)
+                    self._var_contribution(raw_a, fixed_vars, cons=self._obj_eq_name)
                 )
                 raw_a.drop(
                     fixed_vars, axis=1, inplace=True
@@ -336,7 +337,7 @@ class Qubo(gp.Model):
         if self._int_vars_flag:
             if self._vars_with_lower_bounds:
                 sum_lower_bound_of_int_vars += np.ndarray.item(
-                    self.var_contribution(
+                    self._var_contribution(
                         raw_a, self._vars_with_lower_bounds, self._obj_eq_name
                     )
                 )
@@ -741,7 +742,7 @@ class Qubo(gp.Model):
         return super().__init__(
             container=self._q_container,
             name=self._modelName,
-            problem=self._problem_type,
+            problem="MIQCP",
             sense=self._sense,
             objective=qubo_obj,
         )
@@ -900,7 +901,7 @@ class Qubo(gp.Model):
         orig_jacobian = orig_jacobian.pivot(
             index="i", columns="j", values="value"
         ).fillna(0)  # arranging in a matrix
-        linear_contribution = self.var_contribution(
+        linear_contribution = self._var_contribution(
             orig_jacobian, orig_syms_w_new_levels, cons=self._obj_eq_name
         ).flatten()[0]
         total_objective_contribution = linear_contribution + quad_contribution
