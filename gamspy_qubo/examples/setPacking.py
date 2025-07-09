@@ -1,8 +1,7 @@
-import sys
 import gamspy as gp
 from gamspy_qubo import Qubo
 
-m = gp.Container(working_directory="./workdir")
+m = gp.Container()
 
 i = gp.Set(m, name="i", records=[f"{i}" for i in range(1, 5)])
 
@@ -31,9 +30,6 @@ setPacking = gp.Model(
     sense=gp.Sense.MAX,
     objective=z,
 )
-
-# setPacking.solve(solver="CPLEX", output=sys.stdout)
-# print(f"{setPacking.objective_value = }")
 
 q = Qubo(setPacking, penalty=10)
 

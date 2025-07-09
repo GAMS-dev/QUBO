@@ -1,8 +1,7 @@
-import sys
 import gamspy as gp
 from gamspy_qubo import Qubo
 
-m = gp.Container(working_directory="./workdir")
+m = gp.Container()
 
 nodes = gp.Set(m, name="nodes", records=["a", "b", "c", "d"])
 
@@ -51,9 +50,6 @@ mcs = gp.Model(
     sense=gp.Sense.MIN,
     objective=total_cost,
 )
-
-# mcs.solve(solver="CPLEX", output=sys.stdout)
-# print(f"{mcs.objective_value = }")
 
 q = Qubo(mcs, penalty=10)
 

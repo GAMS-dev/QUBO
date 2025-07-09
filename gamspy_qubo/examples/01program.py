@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import sys
 import gamspy as gp
 import random as rp
 from gamspy_qubo import Qubo
 
 rp.seed(42)
 
-m = gp.Container(working_directory="./workdir")
-
+m = gp.Container()
 
 i = gp.Set(m, name="i", domain=["*"], records=[f"i{i}" for i in range(1, 6)])
 
@@ -50,19 +48,9 @@ zero_one = gp.Model(
     objective=obj,
 )
 
-# zero_one.solve(solver="CPLEX", output=sys.stdout)
-# print(f"{zero_one.objective_value = }")
-
 q = Qubo(zero_one, penalty=10)
 
-# qd, qi, qconst = q.transform(penalty=10)
-# h, J, const = q.qubo_to_ising(qd.toDict())
-
-# q.solve(solver="CPLEX", options=gp.Options(equation_listing_limit=1))
 q.solve(solver="CPLEX")
 
 print(f"Original Objective Variable:\n{zero_one._objective_variable.records}")
 print(f"Variable x:\n{x.records}")
-
-# q_mat = q.get_q_matrix()
-# print(q_mat.shape)

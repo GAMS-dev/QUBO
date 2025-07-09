@@ -1,8 +1,7 @@
-import sys
 import gamspy as gp
 from gamspy_qubo import Qubo
 
-m = gp.Container(working_directory="./workdir")
+m = gp.Container()
 
 nodes = gp.Set(m, name="nodes", records=["a", "b", "c", "d"])
 position = gp.Set(m, name="position", records=[0, 1, 2, 3, 4])
@@ -73,12 +72,6 @@ tsp = gp.Model(
     sense=gp.Sense.MIN,
     objective=total_cost,
 )
-
-# tsp.solve(
-#     solver="CPLEX",
-#     output=sys.stdout,
-#     options=gp.Options(hold_fixed_variables=True),
-# )
 
 q = Qubo(tsp, penalty=10, options=gp.Options(hold_fixed_variables=True))
 

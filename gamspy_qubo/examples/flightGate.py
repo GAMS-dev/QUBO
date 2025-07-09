@@ -1,8 +1,7 @@
-import sys
 import gamspy as gp
 from gamspy_qubo import Qubo
 
-m = gp.Container(working_directory="./workdir")
+m = gp.Container()
 
 f = gp.Set(m, name="f", records=["F1", "F2", "F3"], description="set of flights")
 g = gp.Set(m, name="g", records=["G1", "G2"], description="set of gates")
@@ -112,9 +111,9 @@ eq_restrict_arrival_linear = gp.Equation(
 
 p = gp.Set(m, name="p", domain=[i, j])
 
-p[i, j].where[
-    (time_in[i] < time_in[j]) & (time_in[j] < time_out[i] + buffer_time)
-] = True
+p[i, j].where[(time_in[i] < time_in[j]) & (time_in[j] < time_out[i] + buffer_time)] = (
+    True
+)
 
 cost_fn[...] = total_cost == gp.Sum(
     (i, k),
@@ -124,9 +123,9 @@ cost_fn[...] = total_cost == gp.Sum(
     passenger_trnsfr[i, j] * trnsfr_time[k, l] * x[i, k] * x[j, l],
 )
 
-eq_use_one_gate[i] = gp.Sum(k, x[i,k]) == 1
-eq_restrict_arrival[i,j,k].where[p[i,j]] = x[i,k]*x[j,k] == 0
-eq_restrict_arrival_linear[i, j, k].where[p[i, j]] = x[i,k] + x[j,k] <= 1
+eq_use_one_gate[i] = gp.Sum(k, x[i, k]) == 1
+eq_restrict_arrival[i, j, k].where[p[i, j]] = x[i, k] * x[j, k] == 0
+eq_restrict_arrival_linear[i, j, k].where[p[i, j]] = x[i, k] + x[j, k] <= 1
 
 
 fga = gp.Model(
@@ -149,10 +148,6 @@ fgal = gp.Model(
     objective=total_cost,
 )
 
-# fgal.solve(solver="CPLEX", output=sys.stdout)
-# print(f"{fgal.objective_value = }")
-
-# set penalty 650 !!This comes from the Scalar - pen_one_gate
 q = Qubo(fgal, penalty=650)
 
 q.solve(solver="CPLEX", options=gp.Options(time_limit=60, threads=4))

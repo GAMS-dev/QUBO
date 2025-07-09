@@ -1,8 +1,7 @@
-import sys
 import gamspy as gp
 from gamspy_qubo import Qubo
 
-m = gp.Container(working_directory="./workdir")
+m = gp.Container()
 
 i = gp.Set(m, name="i", records=[1, 2, 3, 4])
 

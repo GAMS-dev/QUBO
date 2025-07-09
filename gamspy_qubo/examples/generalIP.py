@@ -1,9 +1,7 @@
-import sys
 import gamspy as gp
-import pandas as pd
 from gamspy_qubo import Qubo
 
-m = gp.Container(working_directory="./workdir")
+m = gp.Container()
 
 i = gp.Set(m, name="i", records=[f"b{i}" for i in range(1, 5)])
 
@@ -45,9 +43,6 @@ demo_model = gp.Model(
     objective=z,
 )
 
-# demo_model.solve(solver="CPLEX", output=sys.stdout)
-# print(f"{demo_model.objective_value = }")
-
 q = Qubo(demo_model, penalty=10)
 
 q.solve(solver="CPLEX")
@@ -55,4 +50,3 @@ q.solve(solver="CPLEX")
 print(f"Original Objective Variable:\n{demo_model._objective_variable.records}")
 print(f"Variable x:\n{x.records}")
 print(f"Variable z:\n{z.records}")
-

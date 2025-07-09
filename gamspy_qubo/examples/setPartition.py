@@ -1,9 +1,8 @@
-import sys
 import gamspy as gp
 import pandas as pd
 from gamspy_qubo import Qubo
 
-m = gp.Container(working_directory="./workdir")
+m = gp.Container()
 
 i = gp.Set(m, name="i", records=[f"b{i}" for i in range(1, 7)])
 
@@ -30,7 +29,7 @@ c2 = gp.Equation(m, name="c2")
 c3 = gp.Equation(m, name="c3")
 c4 = gp.Equation(m, name="c4")
 
-obj[...] = gp.Sum(i, c[i]*x[i]) == z
+obj[...] = gp.Sum(i, c[i] * x[i]) == z
 c1[...] = x["b1"] + x["b3"] + x["b6"] == 1
 c2[...] = x["b2"] + x["b3"] + x["b5"] + x["b6"] == 1
 c3[...] = x["b3"] + x["b4"] + x["b5"] == 1
@@ -44,9 +43,6 @@ setPartition = gp.Model(
     sense=gp.Sense.MIN,
     objective=z,
 )
-
-# setPartition.solve(solver="CPLEX", output=sys.stdout)
-# print(f"{setPartition.objective_value = }")
 
 q = Qubo(setPartition, penalty=10)
 

@@ -21,12 +21,11 @@ Dudeney, H E, Amusements in Mathematics. Dover, New York, 1970.
 Keywords: mixed integer linear programming, maximum knights problem, mathematics
 """
 
-import sys
 import gamspy as gp
 import numpy as np
 from gamspy_qubo import Qubo
 
-m = gp.Container(working_directory="./workdir")
+m = gp.Container()
 
 SIZE = 8
 
@@ -100,12 +99,6 @@ knightx = gp.Model(
 solver_options = gp.Options(
     relative_optimality_gap=0, absolute_optimality_gap=0.999, time_limit=10
 )
-
-# knight.solve(
-#     solver="CPLEX",
-#     output=sys.stdout,
-#     options=solver_options,
-# )
 
 q = Qubo(knightx, penalty=10)
 

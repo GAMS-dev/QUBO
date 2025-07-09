@@ -7,11 +7,10 @@ The quadratic terms otherwise, for e.g., (x_1)^2 can be treated as x_1
 since x_1 is binary.
 """
 
-import sys
 import gamspy as gp
 from gamspy_qubo import Qubo
 
-m = gp.Container(working_directory="./workdir")
+m = gp.Container()
 
 i = gp.Set(m, name="i", records=[1, 2, 3, 4, 5])
 
