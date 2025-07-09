@@ -1,7 +1,6 @@
 import re
 import gamspy as gp
 import logging as log
-import warnings
 import numpy as np
 import pandas as pd
 
@@ -78,8 +77,6 @@ class Qubo(gp.Model):
                 level=log_level,
                 force=True,
             )
-
-        warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
     def __str__(self) -> str:
         return (
@@ -457,7 +454,7 @@ class Qubo(gp.Model):
                 case2_penalty[case2_diag] *= -2
             else:  # if there are no rows with two 1s in them
                 case2_penalty = np.zeros((nvars, nvars))
-            log.debug("\nSpecial constraint case 2:\n{special_cons_case_2_lable}")
+            log.debug(f"\nSpecial constraint case 2:\n{special_cons_case_2_lable}")
 
         else:
             case2_cons_index_lable = []

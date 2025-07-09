@@ -84,8 +84,6 @@ log_level = log_level_dict.get('%log_on%', logging.WARN)
 if log_level < logging.WARN:
     logging.basicConfig(filename='%modelName%_reformulation.log', filemode='w', format='%(message)s', level=log_level, force=True)
 
-warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
-
 is_max = "x" in "%direction%".lower()
 gdx_file = r"%modelName%.gdx"
 container = gt.Container(gdx_file)
