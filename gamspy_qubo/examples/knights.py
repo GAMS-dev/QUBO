@@ -73,7 +73,7 @@ defmovex = gp.Equation(
     m, name="defmovex", domain=[n, i, j], description="move restrictions"
 )
 
-deftotal[...] = total == gp.Sum(gp.Domain(i, j), x[i, j])
+deftotal[...] = total == gp.Sum((i, j), x[i, j])
 defmove[i, j] = gp.Sum(n, x[i + move["H", n], j + move["V", n]]) <= gp.Card(i) * (
     1 - x[i, j]
 )

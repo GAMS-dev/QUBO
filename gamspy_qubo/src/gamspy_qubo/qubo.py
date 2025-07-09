@@ -65,7 +65,7 @@ class Qubo(gp.Model):
             else working_directory
         )
         self._sense: gp.Sense = model.sense
-        self.penalty: gp.Sense = penalty
+        self.penalty: int = penalty
         self._container: gp.Container = self._run_convert(
             workdir=self._work_dir, **kwargs
         )
@@ -120,7 +120,7 @@ class Qubo(gp.Model):
 
     @staticmethod
     def var_contribution(
-        A: pd.DataFrame, vars: dict, cons: Optional[list] = None
+        A: pd.DataFrame, vars: dict, cons: list | None = None
     ) -> np.ndarray:
         """
         helper function to calculate the contribution of given variables
@@ -148,7 +148,7 @@ class Qubo(gp.Model):
 
     def transform(
         self, penalty: int = None
-    ) -> Tuple[gp.Parameter, gp.Set, gp.Parameter]:
+    ) -> tuple[gp.Parameter, gp.Set, gp.Parameter]:
         if penalty is None:
             penalty = self.penalty
 
@@ -535,7 +535,7 @@ class Qubo(gp.Model):
             A_coeff: pd.DataFrame,
             ele: pd.Series,
             nslacks: int,
-        ) -> Tuple[np.ndarray, pd.DataFrame, int]:
+        ) -> tuple[np.ndarray, pd.DataFrame, int]:
             """
             helper function to update the original "A" matrix of coeffs
 
@@ -560,7 +560,7 @@ class Qubo(gp.Model):
             nslacks += len(slacks)
             return np.append(b_vec, [rhs]), A_coeff, nslacks
 
-        def get_lhs_bounds(ele: pd.DataFrame) -> Tuple[float, float]:
+        def get_lhs_bounds(ele: pd.DataFrame) -> tuple[float, float]:
             """
             helper function to find the bounds of a constraint
 
@@ -929,7 +929,7 @@ class Qubo(gp.Model):
             return "Function is not convex."
 
     @staticmethod
-    def qubo_to_ising(Q: dict, offset: float = 0.0) -> Tuple[dict, dict, float]:
+    def qubo_to_ising(Q: dict, offset: float = 0.0) -> tuple[dict, dict, float]:
         """
         This is the Qubo to Ising Reformulation. Here, the variable X in {-1,1}
 

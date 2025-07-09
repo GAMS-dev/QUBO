@@ -34,7 +34,7 @@ z = gp.Variable(m, name="z")
 obj = gp.Equation(m, name="obj")
 c1 = gp.Equation(m, name="c1")
 
-obj[...] = gp.Sum(gp.Domain(i, j), x[i] * uc[i, j] * x[j]) == z
+obj[...] = gp.Sum((i, j), x[i] * uc[i, j] * x[j]) == z
 c1[...] = gp.Sum(i, pc[i] * x[i]) <= 16
 
 qkp = gp.Model(

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 import gamspy as gp
 import random as rp

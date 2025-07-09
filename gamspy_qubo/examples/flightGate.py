@@ -117,10 +117,10 @@ p[i, j].where[
 ] = True
 
 cost_fn[...] = total_cost == gp.Sum(
-    gp.Domain(i, k),
+    (i, k),
     (passengers_out[i] * dep_time[k] + passengers_in[i] * arr_time[k]) * x[i, k],
 ) + gp.Sum(
-    gp.Domain(i, j, k, l),
+    (i, j, k, l),
     passenger_trnsfr[i, j] * trnsfr_time[k, l] * x[i, k] * x[j, l],
 )
 

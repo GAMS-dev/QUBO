@@ -75,7 +75,7 @@ c2 = gp.Equation(
 )
 c2[i] = gp.Sum(j, x[i,j]) == 1
 
-obj = gp.Sum(gp.Domain(i,j,k,l), flow[i,j]*x[i,k]*x[j,l]*dist[k,l])
+obj = gp.Sum((i,j,k,l), flow[i,j]*x[i,k]*x[j,l]*dist[k,l])
 
 
 qap = gp.Model(

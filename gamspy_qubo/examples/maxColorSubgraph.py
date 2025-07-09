@@ -39,7 +39,7 @@ eq_get_one_clr = gp.Equation(
     m, name="eq_get_one_clr", domain=n, description="Each node gets only one color"
 )
 
-cost_fn[...] = total_cost == gp.Sum(gp.Domain(edges[n1, n2], c), x[n1, c] * x[n2, c])
+cost_fn[...] = total_cost == gp.Sum((edges[n1, n2], c), x[n1, c] * x[n2, c])
 
 eq_get_one_clr[n] = gp.Sum(c, x[n, c]) == 1
 
