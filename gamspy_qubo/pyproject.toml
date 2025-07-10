@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gamspy_qubo"
+version = "0.1.0"
+description = "A GAMSPy implemention of classic GAMS-QUBO reformulation."
+authors = [
+  { name = "GAMS Development Corporation", email = "support@gams.com" },
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "gamspy >= 1.11.0"
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest >= 8.4.1",
+]
+
+[project.urls]
+repository = "https://github.com/GAMS-dev/qubo"
+
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff.lint]
+ignore = ["E741"]
