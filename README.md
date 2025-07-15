@@ -88,3 +88,8 @@ The file `test_qubo_solve.gms` tests the correctness of qubo_solve in certain sc
 ## Choosing the right Penalty
 
 A penalty value that is too large can impede the solution process as the penalty terms overwhelm the original objective function information, making it difficult to distinguish the quality of one solution from another. On the other hand, a penalty value that is too small jeopardizes the search for feasible solutions. Generally, there is a ‘Goldilocks region’ of considerable size that contains penalty values that work well. A little preliminary thought about the model can yield a ballpark estimate of the original objective function value. Taking P to be some percentage (75% to 150%) of this estimate is often a good place to start. In the end, solutions generated can always be checked for feasibility, leading to changes in penalties and further rounds of the solution process as needed to zero in on an acceptable solution.
+
+## Acknowledgments
+The QUBO Reformulation tool has been developed under the financial support of:
+
+ProvideQ (BMWi project, ID: 01MQ22006D)
