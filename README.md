@@ -92,5 +92,5 @@ A penalty value that is too large can impede the solution process as the penalty
 ## Acknowledgments
 The QUBO reformulation tool has been developed under the financial support of:
 
-ProvideQ (BMWi project, ID: 01MQ22006D)
-QuSol (BMFTR project, ID: 13N17172)
+- ProvideQ (BMWi project, ID: 01MQ22006D)
+- QuSol (BMFTR project, ID: 13N17172)
