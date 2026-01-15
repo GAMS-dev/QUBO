@@ -1,3 +1,4 @@
+import importlib
 import re
 import gamspy as gp
 import logging as log
@@ -13,6 +14,17 @@ def validate_value(value: int, allowed_values: list, param_name: str) -> int:
     if value not in allowed_values:
         raise ValueError(f"{param_name} must be one of {allowed_values}")
     return value
+
+
+def check_dependencies(solver_name, packages):
+    for pkg_name, import_path in packages.items():
+        try:
+            importlib.import_module(import_path)
+        except ImportError:
+            raise ImportError(
+                f"The {solver_name} solver requires the '{pkg_name}' package. "
+                f"Install it with: pip install {pkg_name}"
+            )
 
 
 class Qubo(gp.Model):
@@ -31,6 +43,9 @@ class Qubo(gp.Model):
         Enable logging information.
         Options are {0 = WARN, 1 = INFO, 2 = DEBUG}.
         By default it is 0.
+    solver: str | "CPLEX"
+        Select the backend to solve the QUBO.
+        At the moment only CPLEX is supported, but support for Kipu and Dwave is on the way
 
     Notes
     -----
@@ -45,6 +60,7 @@ class Qubo(gp.Model):
         name: str = "QUBO",
         penalty: int = 1,
         log_on: int = 0,
+        solver: str = "CPLEX",
         **kwargs,
     ):
         if not isinstance(model, gp.Model):
@@ -63,6 +79,7 @@ class Qubo(gp.Model):
         self.Q: np.ndarray = None
         self.Qconst: float = None
         self._TRANSFORMATION_COMPLETE = False
+        self._solver = solver
 
         if (
             log_level := LOG_LEVEL_DICT.get(
@@ -76,6 +93,11 @@ class Qubo(gp.Model):
                 format="%(message)s",
                 level=log_level,
                 force=True,
+            )
+
+        if self._solver == "DWAVE":
+            check_dependencies(
+                "DWAVE", {"dwave-ocean-sdk": "dwave.samplers", "dimod": "dimod"}
             )
 
     def __str__(self) -> str:
@@ -553,9 +575,13 @@ class Qubo(gp.Model):
                 f"slack_{con_index}_{i}"
                 for i in range(nslacks + 1, nslacks + len(slacks) + 1)
             ]
-            A_coeff[slack_names] = 0
-            A_coeff.loc[con_index, slack_names] = slacks
+            new_cols = pd.DataFrame(
+                0, index=A_coeff.index, columns=slack_names, dtype=slacks.dtype
+            )
+            new_cols.loc[con_index, slack_names] = slacks
+            A_coeff = pd.concat([A_coeff, new_cols], axis=1)
             nslacks += len(slacks)
+
             return np.append(b_vec, [rhs]), A_coeff, nslacks
 
         def get_lhs_bounds(ele: pd.DataFrame) -> tuple[float, float]:
@@ -751,16 +777,38 @@ class Qubo(gp.Model):
         if f"{self._modelName}_objective" not in self._q_container.data:
             self._model()
 
-        try:
-            solved = super().solve(*args, **kwargs)
-            self._map_solution()
-            return solved
-        except Exception as e:
-            raise GamspyException(
-                f"Something went wrong while solving QUBO.\nMessage: {e}"
-            )
+        if self._solver == "CPLEX":
+            try:
+                solved = super().solve(*args, **kwargs)
+                self._map_classical_solution()
+                return solved
+            except Exception as e:
+                raise GamspyException(
+                    f"Something went wrong while solving QUBO.\nMessage: {e}"
+                )
+        elif self._solver == "DWAVE":
+            print("\n--- Starting D-Wave (Ocean) Solve ---")
+            ut_mat = self.triu()
+            q_vars = self._q_container["qi"].records["uni"].tolist()
+            matrix_dict = {}
+            rows, cols = ut_mat.nonzero()
+            for i, j in zip(rows, cols):
+                matrix_dict[(q_vars[i], q_vars[j])] = ut_mat[i, j]
 
-    def _map_solution(self) -> None:
+            from dwave.samplers import SimulatedAnnealingSampler
+            from dimod import BinaryQuadraticModel
+
+            bqm = BinaryQuadraticModel.from_qubo(matrix_dict, offset=float(self.Qconst))
+            sampler = SimulatedAnnealingSampler()
+            response = sampler.sample(bqm, num_reads=1000)
+            best_sample = response.first.sample
+            best_energy = response.first.energy
+
+            sol = pd.DataFrame(best_sample.items(), columns=["j", "level"])
+            print(f"Best Energy Found: {best_energy}")
+            self._map_dwave_solution(solution=sol, obj_val=best_energy)
+
+    def _map_classical_solution(self) -> None:
         """
         This function maps the QUBO solution to the original Problem
         """
@@ -873,9 +921,7 @@ class Qubo(gp.Model):
             ]
             newsol = pd.concat([split_labels, newsol], axis=1)
             newsol.drop(["QUBO_label"], axis=1, inplace=True)
-            newsol[split_labels.columns] = newsol[split_labels.columns].astype(
-                "category"
-            )
+            newsol.iloc[:, : len(split_labels)].astype("category")
             self._og_model.container[vars].records = newsol.reset_index(drop=True)
 
         """
@@ -911,6 +957,49 @@ class Qubo(gp.Model):
         self._og_model.container[original_obj_sym].records = obj_var_coeff.reset_index(
             drop=True
         )
+
+    def _map_dwave_solution(self, solution: pd.DataFrame, obj_val: float) -> None:
+        """
+        Helper function to map the solution returned from the qpu to the original problem and set the respective gams symbols
+        """
+
+        oldvars = self._container["x"].records
+        oldvars.drop(["level"], inplace=True, axis=1)
+
+        res = solution.merge(oldvars, how="right", on="j")
+        vardict = self._container["j"].records
+        separate_sym_domain = vardict["element_text"].str.split("(", expand=True)
+
+        if (
+            len(separate_sym_domain.columns) == 1
+        ):  # check if all variables are flat, i.e., no domain
+            vardict["symbol"] = separate_sym_domain[0]
+            vardict["domain"] = None
+        else:
+            vardict[["symbol", "domain"]] = separate_sym_domain[[0, 1]]
+            vardict["domain"] = vardict["domain"].str.rstrip(")")
+            vardict["domain"] = vardict["domain"].str.strip(r"\'")
+
+        vardict.drop(columns=["element_text"], inplace=True)
+        vardict.rename({"uni": "j"}, axis=1, inplace=True)
+
+        final = res.merge(vardict, how="right", on="j")
+
+        for symbol in final["symbol"].unique():
+            if symbol == self._og_model._objective_variable.name:
+                self._og_model.container[symbol].records.loc[:, "level"] = obj_val
+            else:
+                temp = final[final["symbol"] == symbol].reset_index(drop=True)
+                temp = temp[["domain", "level", "marginal", "lower", "upper", "scale"]]
+                split_labels = temp["domain"].str.split(",", expand=True)
+                split_labels.columns = [
+                    dom if isinstance(dom, str) else dom.name
+                    for dom in self._og_model.container[symbol].domain
+                ]
+                temp = pd.concat([split_labels, temp], axis=1)
+                temp.drop(["domain"], axis=1, inplace=True)
+                temp.iloc[:, : len(split_labels)].astype("category")
+                self._og_model.container[symbol].records = temp.reset_index(drop=True)
 
     @staticmethod
     def check_convexity(Q: np.ndarray) -> str:
@@ -989,3 +1078,14 @@ class Qubo(gp.Model):
     @property
     def qubo(self):
         return self.Q
+
+    def triu(self):
+        """
+        Helper function to fetch the upper triangular matrix of a symmetric Q matrix
+
+        Returns:
+            An upper triangular matrix
+        """
+        upper_mask = np.triu(np.ones_like(self.Q), k=1)  # 1 above diagonal, 0 elsewhere
+        scaled_upper = self.Q * (1 + upper_mask)  # Double above diagonal
+        return np.triu(scaled_upper)
