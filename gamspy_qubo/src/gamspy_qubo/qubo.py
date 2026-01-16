@@ -79,7 +79,7 @@ class Qubo(gp.Model):
         self.Q: np.ndarray = None
         self.Qconst: float = None
         self._TRANSFORMATION_COMPLETE = False
-        self._solver = solver
+        self._solver = solver.lower()
 
         if (
             log_level := LOG_LEVEL_DICT.get(
@@ -95,7 +95,7 @@ class Qubo(gp.Model):
                 force=True,
             )
 
-        if self._solver == "DWAVE":
+        if self._solver == "dwave":
             check_dependencies(
                 "DWAVE", {"dwave-ocean-sdk": "dwave.samplers", "dimod": "dimod"}
             )
@@ -777,7 +777,7 @@ class Qubo(gp.Model):
         if f"{self._modelName}_objective" not in self._q_container.data:
             self._model()
 
-        if self._solver == "CPLEX":
+        if self._solver == "cplex":
             try:
                 solved = super().solve(*args, **kwargs)
                 self._map_classical_solution()
@@ -786,7 +786,7 @@ class Qubo(gp.Model):
                 raise GamspyException(
                     f"Something went wrong while solving QUBO.\nMessage: {e}"
                 )
-        elif self._solver == "DWAVE":
+        elif self._solver == "dwave":
             print("\n--- Starting D-Wave (Ocean) Solve ---")
             ut_mat = self.triu()
             q_vars = self._q_container["qi"].records["uni"].tolist()
@@ -800,7 +800,7 @@ class Qubo(gp.Model):
 
             bqm = BinaryQuadraticModel.from_qubo(matrix_dict, offset=float(self.Qconst))
             sampler = SimulatedAnnealingSampler()
-            response = sampler.sample(bqm, num_reads=1000)
+            response = sampler.sample(bqm, num_reads=kwargs.get("num_reads", 100))
             best_sample = response.first.sample
             best_energy = response.first.energy
 
@@ -921,7 +921,8 @@ class Qubo(gp.Model):
             ]
             newsol = pd.concat([split_labels, newsol], axis=1)
             newsol.drop(["QUBO_label"], axis=1, inplace=True)
-            newsol.iloc[:, : len(split_labels)].astype("category")
+            for col in split_labels.columns:
+                newsol[col] = newsol[col].astype("category")
             self._og_model.container[vars].records = newsol.reset_index(drop=True)
 
         """
@@ -998,7 +999,8 @@ class Qubo(gp.Model):
                 ]
                 temp = pd.concat([split_labels, temp], axis=1)
                 temp.drop(["domain"], axis=1, inplace=True)
-                temp.iloc[:, : len(split_labels)].astype("category")
+                for col in split_labels.columns:
+                    temp[col] = temp[col].astype("category")
                 self._og_model.container[symbol].records = temp.reset_index(drop=True)
 
     @staticmethod
