@@ -921,8 +921,9 @@ class Qubo(gp.Model):
             ]
             newsol = pd.concat([split_labels, newsol], axis=1)
             newsol.drop(["QUBO_label"], axis=1, inplace=True)
-            for col in split_labels.columns:
-                newsol[col] = newsol[col].astype("category")
+            newsol[split_labels.columns] = newsol[split_labels.columns].astype(
+                "category"
+            )
             self._og_model.container[vars].records = newsol.reset_index(drop=True)
 
         """
@@ -999,8 +1000,9 @@ class Qubo(gp.Model):
                 ]
                 temp = pd.concat([split_labels, temp], axis=1)
                 temp.drop(["domain"], axis=1, inplace=True)
-                for col in split_labels.columns:
-                    temp[col] = temp[col].astype("category")
+                temp[split_labels.columns] = temp[split_labels.columns].astype(
+                    "category"
+                )
                 self._og_model.container[symbol].records = temp.reset_index(drop=True)
 
     @staticmethod
