@@ -43,9 +43,11 @@ class Qubo(gp.Model):
         Enable logging information.
         Options are {0 = WARN, 1 = INFO, 2 = DEBUG}.
         By default it is 0.
-    solver: str | "CPLEX"
+    method: str | "classic"
         Select the backend to solve the QUBO.
-        At the moment only CPLEX is supported, but support for Kipu and Dwave is on the way
+        "classic": Support all the QUBO solvers that comes with GAMSPy, for e.g., `SCIP`, `CPLEX`, etc. Default solver is `SBB`.
+        "dwave": At the moment, Dwave's `SimulatedAnnealing` backend is supported.
+                 We plan to add more backends in the future.
 
     Notes
     -----
@@ -60,7 +62,7 @@ class Qubo(gp.Model):
         name: str = "QUBO",
         penalty: int = 1,
         log_on: int = 0,
-        solver: str = "CPLEX",
+        method: str = "classic",
         **kwargs,
     ):
         if not isinstance(model, gp.Model):
@@ -79,7 +81,7 @@ class Qubo(gp.Model):
         self.Q: np.ndarray = None
         self.Qconst: float = None
         self._TRANSFORMATION_COMPLETE = False
-        self._solver = solver.lower()
+        self._method = method.lower()
 
         if (
             log_level := LOG_LEVEL_DICT.get(
@@ -95,7 +97,7 @@ class Qubo(gp.Model):
                 force=True,
             )
 
-        if self._solver == "dwave":
+        if self._method == "dwave":
             check_dependencies(
                 "DWAVE", {"dwave-ocean-sdk": "dwave.samplers", "dimod": "dimod"}
             )
@@ -777,7 +779,7 @@ class Qubo(gp.Model):
         if f"{self._modelName}_objective" not in self._q_container.data:
             self._model()
 
-        if self._solver == "cplex":
+        if self._method == "classic":
             try:
                 solved = super().solve(*args, **kwargs)
                 self._map_classical_solution()
@@ -786,7 +788,7 @@ class Qubo(gp.Model):
                 raise GamspyException(
                     f"Something went wrong while solving QUBO.\nMessage: {e}"
                 )
-        elif self._solver == "dwave":
+        elif self._method == "dwave":
             print("\n--- Starting D-Wave (Ocean) Solve ---")
             ut_mat = self.triu()
             q_vars = self._q_container["qi"].records["uni"].tolist()
