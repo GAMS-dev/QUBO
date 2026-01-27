@@ -35,3 +35,8 @@ where = ["src"]
 
 [tool.ruff.lint]
 ignore = ["E741"]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.3.0",
+]
