@@ -1,30 +1,14 @@
-import importlib
 import re
 import gamspy as gp
 import logging as log
 import numpy as np
 import pandas as pd
 
+from gamspy_qubo import _utils
 from gamspy.exceptions import ValidationError, GamspyException
 
+
 LOG_LEVEL_DICT = {0: log.WARN, 1: log.INFO, 2: log.DEBUG}
-
-
-def validate_value(value: int, allowed_values: list, param_name: str) -> int:
-    if value not in allowed_values:
-        raise ValueError(f"{param_name} must be one of {allowed_values}")
-    return value
-
-
-def check_dependencies(solver_name, packages):
-    for pkg_name, import_path in packages.items():
-        try:
-            importlib.import_module(import_path)
-        except ImportError:
-            raise ImportError(
-                f"The {solver_name} solver requires the '{pkg_name}' package. "
-                f"Install it with: pip install {pkg_name}"
-            )
 
 
 class Qubo(gp.Model):
@@ -43,9 +27,8 @@ class Qubo(gp.Model):
         Enable logging information.
         Options are {0 = WARN, 1 = INFO, 2 = DEBUG}.
         By default it is 0.
-    method: str | "classic"
-        Select the backend to solve the QUBO.
-        "classic": Support all the QUBO solvers that comes with GAMSPy, for e.g., `SCIP`, `CPLEX`, etc. Default solver is `SBB`.
+    backend: str | "cplex"
+        Select the backend to solve the QUBO. Support all the QUBO solvers that comes with GAMSPy, for e.g., `SCIP`, `CPLEX`, etc. Default solver is `SBB`.
         "dwave": At the moment, Dwave's `SimulatedAnnealing` backend is supported.
                  We plan to add more backends in the future.
 
@@ -62,7 +45,7 @@ class Qubo(gp.Model):
         name: str = "QUBO",
         penalty: int = 1,
         log_on: int = 0,
-        method: str = "classic",
+        backend: str = "cplex",
         **kwargs,
     ):
         if not isinstance(model, gp.Model):
@@ -78,14 +61,16 @@ class Qubo(gp.Model):
             workdir=self._work_dir, **kwargs
         )
         self._q_container = gp.Container(working_directory=self._work_dir)
-        self.Q: np.ndarray = None
-        self.Qconst: float = None
+        self.Q: np.ndarray | None = None
+        self.Qconst: float | None = None
         self._TRANSFORMATION_COMPLETE = False
-        self._method = method.lower()
+        self._backend = backend.lower()
 
         if (
             log_level := LOG_LEVEL_DICT.get(
-                validate_value(log_on, allowed_values=[0, 1, 2], param_name="log_on"),
+                _utils.validate_value(
+                    log_on, allowed_values=[0, 1, 2], param_name="log_on"
+                ),
                 log.WARN,
             )
         ) < log.WARN:
@@ -97,14 +82,14 @@ class Qubo(gp.Model):
                 force=True,
             )
 
-        if self._method == "dwave":
-            check_dependencies(
+        if self._backend == "dwave":
+            _utils.check_dependencies(
                 "DWAVE", {"dwave-ocean-sdk": "dwave.samplers", "dimod": "dimod"}
             )
 
     def __str__(self) -> str:
         return (
-            f"Model {self._modelName}:\n  Problem Type: {self._problem_type}\n  Sense:"
+            f"Model {self._modelName}:\n  Problem Type: MIQCP\n  Sense:"
             f" {self._sense}\n  Equations: {self._modelName}_objective"
         )
 
@@ -129,36 +114,12 @@ class Qubo(gp.Model):
             working_directory=workdir,
         )
 
-    @staticmethod
-    def _var_contribution(
-        A: pd.DataFrame, vars: dict, cons: list | None = None
-    ) -> np.ndarray:
-        """
-        helper function to calculate the contribution of given variables
-        in a constraint or set of constraints
-
-        Args:
-            A:      df of coefficients
-            vars:   contributing variables
-            cons:   participating constraints
-
-        Returns:
-            np.ndarray of Total contribution of all variables for that constraint
-        """
-        cons = slice(None) if cons is None else cons
-        coeffs_of_vars_in_constraint = A.loc[cons, vars.keys()].to_numpy()
-        lb_var_levels = np.array(list(vars.values())).reshape((len(vars), 1))
-        if coeffs_of_vars_in_constraint.size > 0:
-            return coeffs_of_vars_in_constraint @ lb_var_levels
-
-        return np.array([0])
-
     def _check_transformation(self):
         if not self._TRANSFORMATION_COMPLETE:
             raise ValidationError("Run transform first to generate the Q Matrix.")
 
     def transform(
-        self, penalty: int = None
+        self, penalty: int | None = None
     ) -> tuple[gp.Parameter, gp.Set, gp.Parameter]:
         """
         Method to perform the QUBO reformulation on the provided model.
@@ -287,7 +248,7 @@ class Qubo(gp.Model):
                 f"\nList of variables with lower bounds:\n{self._vars_with_lower_bounds}"
             )
             self._lower_bounded_vars_flag = True
-            contribution = self._var_contribution(raw_a, fixed_and_lower_bounds)
+            contribution = _utils.var_contribution(raw_a, fixed_and_lower_bounds)
             eq_data.loc[:, ["lower", "upper"]] -= contribution
             if fixed_vars:
                 self._fixed_vars_flag = True
@@ -296,7 +257,7 @@ class Qubo(gp.Model):
                 bin_vars = [var for var in bin_vars if var not in fixed_vars]
                 int_vars = [var for var in int_vars if var not in fixed_vars]
                 sum_fixed_obj_var_coeffs += np.ndarray.item(
-                    self._var_contribution(raw_a, fixed_vars, cons=self._obj_eq_name)
+                    _utils.var_contribution(raw_a, fixed_vars, cons=self._obj_eq_name)
                 )
                 raw_a.drop(
                     fixed_vars, axis=1, inplace=True
@@ -326,29 +287,6 @@ class Qubo(gp.Model):
                 eq_data[eq_data["i"].isin(redundant_cons)].index, axis=0, inplace=True
             )
 
-        def gen_slacks(var_range: float) -> np.ndarray:
-            """
-            helper function to generate slacks depending on the range of variables or rhs
-
-            Args:
-                var_range: upper bound of variable
-
-            Returns:
-                Numpy array containing slack co-efficients
-
-            example:
-                if var_range=5, then gen_slacks(5) returns [1, 2, 2]
-            """
-            if var_range >= 1e4:
-                raise ValidationError(
-                    "The Upper bound is greater than or equal to 1e+4, Quitting!"
-                )
-
-            power = int(np.log2(var_range)) if var_range > 0 else 0
-            bounded_coef = var_range - (2**power - 1)
-            D_val = [2**i for i in range(power)] + [bounded_coef]
-            return np.array(D_val)
-
         """
         If integer variables exist, convert all integers to binary with '@' as a delimiter of variable names
         If Integer variables with lower bound exist, i.e., lb >=1 and lb!=ub, then convert binary variable for that range
@@ -358,14 +296,14 @@ class Qubo(gp.Model):
         if self._int_vars_flag:
             if self._vars_with_lower_bounds:
                 sum_lower_bound_of_int_vars += np.ndarray.item(
-                    self._var_contribution(
+                    _utils.var_contribution(
                         raw_a, self._vars_with_lower_bounds, self._obj_eq_name
                     )
                 )
 
             int_var_vals = all_var_vals[all_var_vals["j"].isin(int_vars)]
             int_to_bin_bounds = {
-                row["j"]: gen_slacks(row["upper"] - row["lower"])
+                row["j"]: _utils.gen_slacks(row["upper"] - row["lower"])
                 for _, row in int_var_vals.iterrows()
             }  # generate coeffs for converted binary vars
             int_bin_vals = pd.DataFrame(columns=["intName", "binName", "value"])
@@ -431,25 +369,13 @@ class Qubo(gp.Model):
         special penalty case 2: x_i  + x_j >= 1 => P*(1 - x_i - x_j + x_i*x_j)
         """
 
-        def check_row_entries(df: pd.DataFrame) -> pd.DataFrame:
-            """
-            helper function to filter DataFrame having either 0 or 1 entries in each row.
-            Args:
-                df: A Pandas DataFrame.
-
-            Returns:
-                Filtered DataFrame with rows having either 0 or 1
-            """
-            row_contains_only_0s_or_1s = df.isin([0, 1]).all(axis=1)
-            return df[row_contains_only_0s_or_1s]
-
         # Case 1 implementation
         special_cons_case_1_lable = [
             ele.i for _, ele in cons.iterrows() if ele.upper == 1 and ele.lower != 1
         ]
         if special_cons_case_1_lable:
             case1_cons = raw_a[bin_vars].loc[special_cons_case_1_lable]
-            case1_cons = check_row_entries(case1_cons.copy())
+            case1_cons = _utils.check_row_entries(case1_cons.copy())
             case1_cons_index_lable = list(case1_cons.index)
             case1_penalty = case1_cons.to_numpy()
             if case1_penalty.size > 0:
@@ -468,7 +394,7 @@ class Qubo(gp.Model):
         ]
         if special_cons_case_2_lable:
             case2_cons = raw_a[bin_vars].loc[special_cons_case_2_lable]
-            case2_cons = check_row_entries(case2_cons.copy())
+            case2_cons = _utils.check_row_entries(case2_cons.copy())
             case2_cons = case2_cons[case2_cons.sum(axis=1) == 2]
             case2_cons_index_lable = list(case2_cons.index)
             case2_penalty = case2_cons.to_numpy()
@@ -499,29 +425,6 @@ class Qubo(gp.Model):
 
         quad = None
 
-        def fetch_quadratic_coeff(raw_df: pd.DataFrame) -> np.ndarray:
-            """
-            helper function to convert the original Q matrix of the problem to a symmetric matrix
-
-            Args:
-                raw_df: Original problem Q data in a pd.DataFrame
-
-            Returns:
-                Numpy Q matrix
-            """
-            raw_df["value"] /= 2
-            mask = raw_df["j_1"].astype(str) == raw_df["j_2"].astype(str)
-            filtered_quad = raw_df.loc[mask, :].copy()
-            raw_df = raw_df.loc[~mask].copy()
-            diag_quad = filtered_quad.reset_index(drop=True)
-            quad = raw_df.copy(deep=True)
-            quad["j_1"], quad["j_2"] = raw_df["j_2"], raw_df["j_1"]
-            quad = pd.concat([raw_df, quad, diag_quad], axis=0)
-            quad = quad.pivot(index="j_1", columns="j_2", values="value").fillna(0)
-            quad = quad.reindex(labels=bin_vars, axis="index")
-            quad = quad.reindex(labels=bin_vars, axis="columns")
-            return quad.to_numpy()
-
         self._quad_val = 0
         if (
             check_quad is not None
@@ -534,7 +437,9 @@ class Qubo(gp.Model):
                 len(rawquad_obj.index) != 0
             ):  # check if quadratic terms exist in the objective function
                 rawquad_obj.drop(["i_0"], axis=1, inplace=True)
-                quad = fetch_quadratic_coeff(raw_df=rawquad_obj)
+                quad = _utils.fetch_quadratic_coeff(
+                    raw_df=rawquad_obj, bin_vars=bin_vars
+                )
                 self._quad_val = quad
                 sum_fixed_obj_var_coeffs /= 2
 
@@ -550,60 +455,12 @@ class Qubo(gp.Model):
             obj += -1 * quad if self._obj_var_direction > 0 else quad
             log.debug("\nNew Q: \n" + np.array2string(obj))
 
-        def modify_matrix(
-            b_vec: np.ndarray,
-            rhs: float,
-            slacks: np.ndarray,
-            A_coeff: pd.DataFrame,
-            ele: pd.Series,
-            nslacks: int,
-        ) -> tuple[np.ndarray, pd.DataFrame, int]:
-            """
-            helper function to update the original "A" matrix of coeffs
-
-            Args:
-                b_vec: The n*1 vector
-                rhs : The Right hand side of a constraint
-                slacks: result of gen_slacks()
-                A_coeff: "A" matrix
-                ele: constraint
-                nslacks: number of slacks
-
-            Returns:
-                updated b_vec, A_coeff and number of slacks
-            """
-            con_index = ele.i
-            slack_names = [
-                f"slack_{con_index}_{i}"
-                for i in range(nslacks + 1, nslacks + len(slacks) + 1)
-            ]
-            new_cols = pd.DataFrame(
-                0, index=A_coeff.index, columns=slack_names, dtype=slacks.dtype
-            )
-            new_cols.loc[con_index, slack_names] = slacks
-            A_coeff = pd.concat([A_coeff, new_cols], axis=1)
-            nslacks += len(slacks)
-
-            return np.append(b_vec, [rhs]), A_coeff, nslacks
-
-        def get_lhs_bounds(ele: pd.DataFrame) -> tuple[float, float]:
-            """
-            helper function to find the bounds of a constraint
-
-            Args:
-                ele: The coefficents of the constraint
-
-            Returns:
-                lower_bound, upper_bound
-            """
-            return ele[ele < 0].sum(), ele[ele > 0].sum()
-
         b_vec = np.array([])
         log.info("\nFinal Cons: \n" + cons.to_string())
         for _, ele in cons.iterrows():
             if ele.upper == ele.lower:  # equal-to type constraint
                 rhs = ele.lower
-                lhs_min_lb, lhs_max_ub = get_lhs_bounds(A_coeff.loc[ele.i])
+                lhs_min_lb, lhs_max_ub = _utils.get_lhs_bounds(A_coeff.loc[ele.i])
                 if (rhs - lhs_min_lb) < 0 or (lhs_max_ub - rhs) < 0:
                     raise ValidationError(f"Constraint is infeasible: {ele.i}")
                 else:
@@ -612,11 +469,11 @@ class Qubo(gp.Model):
 
             elif ele.upper == np.inf:  # greater than type constraint
                 rhs = ele.lower
-                _, lhs_max_ub = get_lhs_bounds(A_coeff.loc[ele.i])
+                _, lhs_max_ub = _utils.get_lhs_bounds(A_coeff.loc[ele.i])
                 slacks_range = lhs_max_ub - rhs
                 if slacks_range > 0:
-                    slacks = -1 * gen_slacks(slacks_range)
-                    b_vec, A_coeff, nslacks = modify_matrix(
+                    slacks = -1 * _utils.gen_slacks(slacks_range)
+                    b_vec, A_coeff, nslacks = _utils.modify_matrix(
                         b_vec, rhs, slacks, A_coeff, ele, nslacks
                     )
                 elif slacks_range == 0:
@@ -627,11 +484,11 @@ class Qubo(gp.Model):
 
             else:  # less-than type constraint
                 rhs = ele.upper
-                lhs_min_lb, _ = get_lhs_bounds(A_coeff.loc[ele.i])
+                lhs_min_lb, _ = _utils.get_lhs_bounds(A_coeff.loc[ele.i])
                 slacks_range = rhs - lhs_min_lb
                 if slacks_range > 0:
-                    slacks = gen_slacks(slacks_range)
-                    b_vec, A_coeff, nslacks = modify_matrix(
+                    slacks = _utils.gen_slacks(slacks_range)
+                    b_vec, A_coeff, nslacks = _utils.modify_matrix(
                         b_vec, rhs, slacks, A_coeff, ele, nslacks
                     )
                 elif slacks_range == 0:
@@ -779,18 +636,20 @@ class Qubo(gp.Model):
         if f"{self._modelName}_objective" not in self._q_container.data:
             self._model()
 
-        if self._method == "classic":
+        if self._backend not in ["dwave"]:
             try:
-                solved = super().solve(*args, **kwargs)
+                solved = super().solve(solver=self._backend, *args, **kwargs)
                 self._map_classical_solution()
                 return solved
             except Exception as e:
                 raise GamspyException(
                     f"Something went wrong while solving QUBO.\nMessage: {e}"
                 )
-        elif self._method == "dwave":
+        elif self._backend == "dwave":
+            # solve_model()
+            # map_solution()
             print("\n--- Starting D-Wave (Ocean) Solve ---")
-            ut_mat = self.triu()
+            ut_mat = self.triu(self.Q)
             q_vars = self._q_container["qi"].records["uni"].tolist()
             matrix_dict = {}
             rows, cols = ut_mat.nonzero()
@@ -809,6 +668,9 @@ class Qubo(gp.Model):
             sol = pd.DataFrame(best_sample.items(), columns=["j", "level"])
             print(f"Best Energy Found: {best_energy}")
             self._map_dwave_solution(solution=sol, obj_val=best_energy)
+
+        else:
+            raise GamspyException(f"Backend {self._backend} not supported.")
 
     def _map_classical_solution(self) -> None:
         """
@@ -948,7 +810,7 @@ class Qubo(gp.Model):
         orig_jacobian = orig_jacobian.pivot(
             index="i", columns="j", values="value"
         ).fillna(0)  # arranging in a matrix
-        linear_contribution = self._var_contribution(
+        linear_contribution = _utils.var_contribution(
             orig_jacobian, orig_syms_w_new_levels, cons=self._obj_eq_name
         ).flatten()[0]
         total_objective_contribution = linear_contribution + quad_contribution
@@ -1007,22 +869,19 @@ class Qubo(gp.Model):
                 )
                 self._og_model.container[symbol].records = temp.reset_index(drop=True)
 
+    @property
+    def qubo(self):
+        return self.Q
+
     @staticmethod
-    def check_convexity(Q: np.ndarray) -> str:
+    def check_convexity(Q: np.ndarray):
         """
         Convenience method to check the convexity of the QUBO using eigenvalues
         """
-        eigenvalues = np.linalg.eigvals(Q)
-
-        if np.all(eigenvalues > 0):
-            return "Function is strictly convex."
-        elif np.all(eigenvalues >= 0):
-            return "Function is convex."
-        else:
-            return "Function is not convex."
+        return _utils.check_convexity(Q)
 
     @staticmethod
-    def qubo_to_ising(Q: dict, offset: float = 0.0) -> tuple[dict, dict, float]:
+    def qubo_to_ising(Q: dict, offset: float = 0.0):
         """
         This is the Qubo to Ising Reformulation. Here, the variable X in {-1,1}
 
@@ -1035,40 +894,10 @@ class Qubo(gp.Model):
                 J: the coupling matrix\
                 offset: adjusted offset for the Ising model
         """
-        h = {}
-        J = {}
-        linear_offset = 0.0
-        quadratic_offset = 0.0
-
-        for (u, v), bias in Q.items():
-            if u == v:
-                if u in h:
-                    h[u] += 0.5 * bias
-                else:
-                    h[u] = 0.5 * bias
-                linear_offset += bias
-            else:
-                if bias != 0.0:
-                    J[(u, v)] = 0.25 * bias
-
-                if u in h:
-                    h[u] += 0.25 * bias
-                else:
-                    h[u] = 0.25 * bias
-
-                if v in h:
-                    h[v] += 0.25 * bias
-                else:
-                    h[v] = 0.25 * bias
-
-                quadratic_offset += bias
-
-        offset += 0.5 * linear_offset + 0.25 * quadratic_offset
-
-        return h, J, offset
+        return _utils.qubo_to_ising(Q, offset)
 
     @staticmethod
-    def qubo_to_maxcut(Q: np.ndarray) -> np.ndarray:
+    def qubo_to_maxcut(Q: np.ndarray):
         """
         This is the Qubo to Maxcut Reformulation. This can be used for SDP procedures.
 
@@ -1078,20 +907,14 @@ class Qubo(gp.Model):
         Returns:
             n x 1 vector associated with the extra variable required in max cut transformation
         """
+        return _utils.qubo_to_maxcut(Q)
 
-        return -1 * np.sum(Q, axis=1)
-
-    @property
-    def qubo(self):
-        return self.Q
-
-    def triu(self):
+    @staticmethod
+    def triu(Q: np.ndarray) -> np.ndarray:
         """
         Helper function to fetch the upper triangular matrix of a symmetric Q matrix
 
         Returns:
             An upper triangular matrix
         """
-        upper_mask = np.triu(np.ones_like(self.Q), k=1)  # 1 above diagonal, 0 elsewhere
-        scaled_upper = self.Q * (1 + upper_mask)  # Double above diagonal
-        return np.triu(scaled_upper)
+        return _utils.triu(Q)

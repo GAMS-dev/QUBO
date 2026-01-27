@@ -19,6 +19,9 @@ dependencies = [
 test = [
   "pytest >= 8.4.1",
 ]
+dwave = [
+  "dwave-ocean-sdk",
+]
 
 [project.urls]
 repository = "https://github.com/GAMS-dev/qubo"
