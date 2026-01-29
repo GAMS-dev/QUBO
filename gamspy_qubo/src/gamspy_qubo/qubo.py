@@ -6,7 +6,7 @@ import pandas as pd
 
 from gamspy_qubo import _utils
 from gamspy.exceptions import ValidationError, GamspyException
-
+from gamspy_qubo.backend import DwaveBackend
 
 LOG_LEVEL_DICT = {0: log.WARN, 1: log.INFO, 2: log.DEBUG}
 
@@ -80,11 +80,6 @@ class Qubo(gp.Model):
                 format="%(message)s",
                 level=log_level,
                 force=True,
-            )
-
-        if self._backend == "dwave":
-            _utils.check_dependencies(
-                "DWAVE", {"dwave-ocean-sdk": "dwave.samplers", "dimod": "dimod"}
             )
 
     def __str__(self) -> str:
@@ -645,29 +640,17 @@ class Qubo(gp.Model):
                 raise GamspyException(
                     f"Something went wrong while solving QUBO.\nMessage: {e}"
                 )
-        elif self._backend == "dwave":
-            # solve_model()
-            # map_solution()
-            print("\n--- Starting D-Wave (Ocean) Solve ---")
-            ut_mat = self.triu(self.Q)
-            q_vars = self._q_container["qi"].records["uni"].tolist()
-            matrix_dict = {}
-            rows, cols = ut_mat.nonzero()
-            for i, j in zip(rows, cols):
-                matrix_dict[(q_vars[i], q_vars[j])] = ut_mat[i, j]
-
-            from dwave.samplers import SimulatedAnnealingSampler
-            from dimod import BinaryQuadraticModel
-
-            bqm = BinaryQuadraticModel.from_qubo(matrix_dict, offset=float(self.Qconst))
-            sampler = SimulatedAnnealingSampler()
-            response = sampler.sample(bqm, num_reads=kwargs.get("num_reads", 100))
-            best_sample = response.first.sample
-            best_energy = response.first.energy
-
-            sol = pd.DataFrame(best_sample.items(), columns=["j", "level"])
-            print(f"Best Energy Found: {best_energy}")
-            self._map_dwave_solution(solution=sol, obj_val=best_energy)
+        elif self._backend in ["dwave"]:
+            _initialize_backend = {"dwave": DwaveBackend}
+            input_data = {
+                "q_matrix": self.Q,
+                "q_const": self.Qconst,
+                "q_vars": self._q_container["qi"].records["uni"].tolist(),
+                "container": self._container,
+                "og_model": self._og_model,
+            }
+            _backend = _initialize_backend[self._backend](input_data=input_data)
+            _backend.solve(*args, **kwargs)
 
         else:
             raise GamspyException(f"Backend {self._backend} not supported.")
@@ -828,51 +811,6 @@ class Qubo(gp.Model):
         self._og_model.container[original_obj_sym].records = obj_var_coeff.reset_index(
             drop=True
         )
-
-    def _map_dwave_solution(self, solution: pd.DataFrame, obj_val: float) -> None:
-        """
-        Helper function to map the solution returned from the qpu to the original problem and set the respective gams symbols
-        """
-
-        oldvars = self._container["x"].records
-        oldvars.drop(["level"], inplace=True, axis=1)
-
-        res = solution.merge(oldvars, how="right", on="j")
-        vardict = self._container["j"].records
-        separate_sym_domain = vardict["element_text"].str.split("(", expand=True)
-
-        if (
-            len(separate_sym_domain.columns) == 1
-        ):  # check if all variables are flat, i.e., no domain
-            vardict["symbol"] = separate_sym_domain[0]
-            vardict["domain"] = None
-        else:
-            vardict[["symbol", "domain"]] = separate_sym_domain[[0, 1]]
-            vardict["domain"] = vardict["domain"].str.rstrip(")")
-            vardict["domain"] = vardict["domain"].str.strip(r"\'")
-
-        vardict.drop(columns=["element_text"], inplace=True)
-        vardict.rename({"uni": "j"}, axis=1, inplace=True)
-
-        final = res.merge(vardict, how="right", on="j")
-
-        for symbol in final["symbol"].unique():
-            if symbol == self._og_model._objective_variable.name:
-                self._og_model.container[symbol].records.loc[:, "level"] = obj_val
-            else:
-                temp = final[final["symbol"] == symbol].reset_index(drop=True)
-                temp = temp[["domain", "level", "marginal", "lower", "upper", "scale"]]
-                split_labels = temp["domain"].str.split(",", expand=True)
-                split_labels.columns = [
-                    dom if isinstance(dom, str) else dom.name
-                    for dom in self._og_model.container[symbol].domain
-                ]
-                temp = pd.concat([split_labels, temp], axis=1)
-                temp.drop(["domain"], axis=1, inplace=True)
-                temp[split_labels.columns] = temp[split_labels.columns].astype(
-                    "category"
-                )
-                self._og_model.container[symbol].records = temp.reset_index(drop=True)
 
     @property
     def qubo(self):

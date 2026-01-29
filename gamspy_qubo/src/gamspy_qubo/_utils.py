@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-
-if TYPE_CHECKING:
-    import pandas as pd
-
-import importlib
+import pandas as pd
 import numpy as np
 from gamspy.exceptions import ValidationError
 
@@ -15,17 +9,6 @@ def validate_value(value: int, allowed_values: list, param_name: str) -> int:
     if value not in allowed_values:
         raise ValueError(f"{param_name} must be one of {allowed_values}")
     return value
-
-
-def check_dependencies(solver_name, packages):
-    for pkg_name, import_path in packages.items():
-        try:
-            importlib.import_module(import_path)
-        except ImportError:
-            raise ImportError(
-                f"The {solver_name} solver requires the '{pkg_name}' package. "
-                f"Install it with: pip install {pkg_name}"
-            )
 
 
 def check_row_entries(df: pd.DataFrame) -> pd.DataFrame:
