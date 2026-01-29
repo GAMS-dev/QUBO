@@ -137,16 +137,15 @@ class Qubo(gp.Model):
 
         self._fixed_vars_flag = False
         self._lower_bounded_vars_flag = False
-        self._obj_eq_name: pd.DataFrame = self._container["iobj"].records
+        obj_eq_name: pd.DataFrame = self._container["iobj"].records
 
-        if self._obj_eq_name is None:
+        if obj_eq_name is None:
             raise ValidationError(
                 "The objective is not defined using a scalar equation. `iobj` in gdx is empty. Quitting."
             )
 
-        obj_var: pd.DataFrame = self._container[
-            "jobj"
-        ].records  # fetch the objective variable name
+        obj_var: list = self._container["jobj"].records["j"].to_list()
+        # fetch the objective variable name
         all_vars: pd.DataFrame = self._container[
             "j"
         ].records  # fetches all variable names
@@ -154,7 +153,7 @@ class Qubo(gp.Model):
         eq_data: pd.DataFrame = self._container["e"].records  # fetches equation data
 
         if (
-            raw_a[-raw_a["i"].isin(self._obj_eq_name["i"].tolist())]["value"]
+            raw_a[-raw_a["i"].isin(obj_eq_name["i"].tolist())]["value"]
             .mod(1)
             .sum(axis=0)
             > 0
@@ -188,7 +187,6 @@ class Qubo(gp.Model):
             [] if int_vars is None else int_vars["j"].to_list()
         )  # check if any int_vars are present
         self._int_vars_flag = False if len(int_vars) == 0 else True
-        obj_var = obj_var["j"].to_list()
         all_var_vals = (
             self._container["x"].records
         )  # get all variable values, viz., [level, marginal, lower, upper, scale]
@@ -198,7 +196,7 @@ class Qubo(gp.Model):
         ):  # Continuous variables are not allowed
             raise ValidationError("There are continuous variables. Quitting.")
 
-        self._obj_eq_name = self._obj_eq_name["i"].to_list()
+        self._obj_eq_name = obj_eq_name["i"].to_list()
 
         check_quad = self._container["ANL"].records
 
@@ -465,7 +463,9 @@ class Qubo(gp.Model):
                     raise ValidationError(f"Constraint is infeasible: {ele.i}")
                 else:
                     b_vec = np.append(b_vec, [rhs])
-                    slacks = []  # do not introduce slacks for equality type constraints
+                    slacks: (
+                        list | np.ndarray
+                    ) = []  # do not introduce slacks for equality type constraints
 
             elif ele.upper == np.inf:  # greater than type constraint
                 rhs = ele.lower
@@ -530,12 +530,12 @@ class Qubo(gp.Model):
         )
         log.debug(f"\nPenalty: {P} | Total Offset: {self.Qconst}\n")
         self.Q = newobj + P * new_x
-        Qdf = pd.DataFrame(
+        Qdf_df: pd.DataFrame | pd.Series = pd.DataFrame(
             self.Q, columns=list(A_coeff.columns), index=list(A_coeff.columns)
         )
-        Qdf = Qdf.unstack()
-        Qdf = Qdf.reset_index()
-        Qdf = list(Qdf.itertuples(index=None, name=None))
+        Qdf_df = Qdf_df.unstack()
+        Qdf_df = Qdf_df.reset_index()
+        Qdf = list(Qdf_df.itertuples(index=False, name=None))
 
         qconst = gp.Parameter(
             self._q_container,
@@ -576,7 +576,7 @@ class Qubo(gp.Model):
         self._TRANSFORMATION_COMPLETE = True
         return qd, qi, qconst
 
-    def write_gdx(self, gdxName: str = None):
+    def write_gdx(self, gdxName: str | None = None):
         if gdxName:
             self._q_container.write(gdxName)
         else:
@@ -591,15 +591,15 @@ class Qubo(gp.Model):
         """
         self._check_transformation()
 
-        non_zero_indices = np.tril_indices_from(self.Q)
-        non_zero_values = self.Q[non_zero_indices]
+        non_zero_indices = np.tril_indices_from(self.Q)  # type: ignore
+        non_zero_values = self.Q[non_zero_indices]  # type: ignore
         with open(f"QMat_{self._modelName}.qs", "w") as fp:
             fp.write(f"{self.Q.shape[0]} {len(non_zero_values)} {self.Qconst}\n")
             for i, j, value in zip(*non_zero_indices, non_zero_values):
                 if value != 0:
                     fp.write(f"{i + 1} {j + 1} {value}\n")
 
-    def _model(self) -> gp.Model:
+    def _model(self) -> None:
         try:
             qd, qi, qconst = self._q_container.getSymbols(["qd", "qi", "qconst"])
         except Exception as e:
@@ -620,8 +620,7 @@ class Qubo(gp.Model):
         )
 
         qubo_obj = gp.Sum(gp.Domain(i, j), x[i] * qd[i, j] * x[j]) + qconst
-
-        return super().__init__(
+        super().__init__(
             container=self._q_container,
             name=self._modelName,
             problem="MIQCP",
@@ -629,7 +628,7 @@ class Qubo(gp.Model):
             objective=qubo_obj,
         )
 
-    def solve(self, *args, **kwargs) -> pd.DataFrame:
+    def solve(self, *args, **kwargs) -> pd.DataFrame | None:
         if not self._TRANSFORMATION_COMPLETE:
             self.transform()
 
@@ -638,7 +637,8 @@ class Qubo(gp.Model):
 
         if self._backend not in ["dwave"]:
             try:
-                solved = super().solve(solver=self._backend, *args, **kwargs)
+                kwargs.setdefault("solver", self._backend)
+                solved = super().solve(*args, **kwargs)
                 self._map_classical_solution()
                 return solved
             except Exception as e:
@@ -672,11 +672,16 @@ class Qubo(gp.Model):
         else:
             raise GamspyException(f"Backend {self._backend} not supported.")
 
+        return None
+
     def _map_classical_solution(self) -> None:
         """
         This function maps the QUBO solution to the original Problem
         """
         solveStatus = super().solve_status
+        assert solveStatus is not None, GamspyException(
+            "Solver status is None. Solve the model first."
+        )
 
         if solveStatus.value in [2, 3, 5, 8]:
             # Continue mapping incumbant solution if solve_status is one of *Interrupt.

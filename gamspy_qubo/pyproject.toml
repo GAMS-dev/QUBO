@@ -10,7 +10,7 @@ authors = [
   { name = "GAMS Development Corporation", email = "support@gams.com" },
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.9, <3.13"
 dependencies = [
   "gamspy >= 1.11.0"
 ]
@@ -36,7 +36,15 @@ where = ["src"]
 [tool.ruff.lint]
 ignore = ["E741"]
 
+[tool.ruff.format]
+line-ending = "cr-lf"
+
 [dependency-groups]
 dev = [
+    "mypy>=1.19.1",
+    "pandas-stubs>=2.2.2.240807",
     "pre-commit>=4.3.0",
+    "ruff>=0.14.14",
+    "types-pygments>=2.19.0.20251121",
+    "types-requests>=2.32.4.20260107",
 ]
