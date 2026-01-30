@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import gamspy as gp
 import numpy as np
 import pytest
-
-import gamspy as gp
 from gamspy import Container
-from gamspy_qubo import Qubo
-
 from gamspy.exceptions import ValidationError
+
+from gamspy_qubo import Qubo
 
 
 @pytest.fixture

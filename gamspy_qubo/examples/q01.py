@@ -8,6 +8,7 @@ since x_1 is binary.
 """
 
 import gamspy as gp
+
 from gamspy_qubo import Qubo
 
 m = gp.Container()

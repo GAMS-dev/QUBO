@@ -1,11 +1,12 @@
-import re
-import gamspy as gp
 import logging as log
+import re
+
+import gamspy as gp
 import numpy as np
 import pandas as pd
+from gamspy.exceptions import GamspyException, ValidationError
 
 from gamspy_qubo import _utils
-from gamspy.exceptions import ValidationError, GamspyException
 from gamspy_qubo.backend import DwaveBackend
 
 LOG_LEVEL_DICT = {0: log.WARN, 1: log.INFO, 2: log.DEBUG}
@@ -100,9 +101,7 @@ class Qubo(gp.Model):
                 **kwargs,
             )
         except Exception as e:
-            raise GamspyException(
-                f"Error while running the >CONVERT< operation.\nMessage: {e}"
-            )
+            raise GamspyException("Error while running the >CONVERT< operation.") from e
 
         return gp.Container(
             load_from=f"{self._og_modelName}.gdx",
@@ -599,8 +598,8 @@ class Qubo(gp.Model):
             qd, qi, qconst = self._q_container.getSymbols(["qd", "qi", "qconst"])
         except Exception as e:
             raise GamspyException(
-                f"Something went from while fetching the q symbols.\nMessage: {e}"
-            )
+                "Something went from while fetching the q symbols."
+            ) from e
 
         i = gp.Alias(self._q_container, name="i", alias_with=qi)
 
@@ -639,7 +638,7 @@ class Qubo(gp.Model):
             except Exception as e:
                 raise GamspyException(
                     f"Something went wrong while solving QUBO.\nMessage: {e}"
-                )
+                ) from e
         elif self._backend in ["dwave"]:
             _initialize_backend = {"dwave": DwaveBackend}
             input_data = {

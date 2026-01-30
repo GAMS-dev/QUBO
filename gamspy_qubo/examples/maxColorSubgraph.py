@@ -1,4 +1,5 @@
 import gamspy as gp
+
 from gamspy_qubo import Qubo
 
 m = gp.Container()

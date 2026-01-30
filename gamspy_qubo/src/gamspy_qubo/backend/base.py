@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import pandas as pd
 
-from abc import ABC, abstractmethod
 import importlib
+from abc import ABC, abstractmethod
 
 
 class baseBackend(ABC):
@@ -31,4 +31,4 @@ class baseBackend(ABC):
                 raise ImportError(
                     f"The {solver_name} solver requires the '{pkg_name}' package. "
                     f"Install it with: pip install {pkg_name}"
-                )
+                ) from None

@@ -23,6 +23,7 @@ Keywords: mixed integer linear programming, maximum knights problem, mathematics
 
 import gamspy as gp
 import numpy as np
+
 from gamspy_qubo import Qubo
 
 m = gp.Container()

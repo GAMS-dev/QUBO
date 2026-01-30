@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import gamspy as gp
 
-from .base import baseBackend
 import importlib
-from gamspy_qubo._utils import triu
+
 import pandas as pd
+
+from gamspy_qubo._utils import triu
+from gamspy_qubo.backend import baseBackend
 
 
 class DwaveBackend(baseBackend):
