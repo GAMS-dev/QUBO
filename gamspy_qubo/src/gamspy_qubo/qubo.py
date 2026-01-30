@@ -62,7 +62,7 @@ class Qubo(gp.Model):
             workdir=self._work_dir, **kwargs
         )
         self._q_container = gp.Container(working_directory=self._work_dir)
-        self.Q: np.ndarray | None = None
+        self.Q: np.ndarray = np.array([])
         self.Qconst: float | None = None
         self._TRANSFORMATION_COMPLETE = False
         self._backend = backend.lower()
@@ -212,7 +212,7 @@ class Qubo(gp.Model):
             if (var.level == var.lower) and (var.level == var.upper)
         }  # check for fixed variables
         fixed_and_lower_bounds = {**self._vars_with_lower_bounds, **fixed_vars}
-        sum_fixed_obj_var_coeffs = 0
+        sum_fixed_obj_var_coeffs = 0.0
 
         if check_quad is not None:
             rawquad = self._container[
@@ -252,7 +252,7 @@ class Qubo(gp.Model):
                     _utils.var_contribution(raw_a, fixed_vars, cons=self._obj_eq_name)
                 )
                 raw_a.drop(
-                    fixed_vars, axis=1, inplace=True
+                    labels=list(fixed_vars.keys()), axis=1, inplace=True
                 )  # dropping columns from the coefficient matrix
                 self._fixed_var_vals: pd.DataFrame = all_var_vals[
                     all_var_vals["j"].isin(fixed_vars)
@@ -415,9 +415,7 @@ class Qubo(gp.Model):
 
         A_coeff = raw_a.loc[cons["i"], bin_vars]
 
-        quad = None
-
-        self._quad_val = 0
+        self._quad_val = np.array([])
         if (
             check_quad is not None
         ):  # check if quadratic terms are present in the original problem
@@ -429,10 +427,9 @@ class Qubo(gp.Model):
                 len(rawquad_obj.index) != 0
             ):  # check if quadratic terms exist in the objective function
                 rawquad_obj.drop(["i_0"], axis=1, inplace=True)
-                quad = _utils.fetch_quadratic_coeff(
+                self._quad_val = _utils.fetch_quadratic_coeff(
                     raw_df=rawquad_obj, bin_vars=bin_vars
                 )
-                self._quad_val = quad
                 sum_fixed_obj_var_coeffs /= 2
 
             rawquad_cons = rawquad[
@@ -442,9 +439,15 @@ class Qubo(gp.Model):
                 raise ValidationError("There are non-linear constraints. Quitting.")
                 ### Removed the support for quadratic constraints.
 
-        if quad is not None:  # add the old quadratic terms/matrix to the new objective
-            log.debug("\nUpdate Objective by adding Q: \n" + np.array2string(quad))
-            obj += -1 * quad if self._obj_var_direction > 0 else quad
+        if (
+            self._quad_val.size
+        ):  # add the old quadratic terms/matrix to the new objective
+            log.debug(
+                "\nUpdate Objective by adding Q: \n" + np.array2string(self._quad_val)
+            )
+            obj += (
+                -1 * self._quad_val if self._obj_var_direction > 0 else self._quad_val
+            )
             log.debug("\nNew Q: \n" + np.array2string(obj))
 
         b_vec = np.array([])
@@ -493,17 +496,21 @@ class Qubo(gp.Model):
 
         logging_a_mat = A_coeff.unstack().reset_index()
         logging_a_mat = logging_a_mat[logging_a_mat[0] != 0]
-        log.debug("\nFinal coefficient matrix: \n" + logging_a_mat.to_string())
-        log.debug(f"\nFinal RHS: \n{b_vec}")
-        log.debug(f"Constant RHS term: {b_vec.T @ b_vec}")
-        log.debug(f"Case 2 Offset Penalty Factor: {case2_penalty_offset_factor}")
+        log_data = {
+            "final_coefficient_matrix": f"\n{logging_a_mat.to_string()}",
+            "final_rhs": b_vec,
+            "constant_rhs_term": b_vec.T @ b_vec,
+            "case2_penalty_offset_factor": case2_penalty_offset_factor,
+            "fixed_variable_contribution": sum_fixed_obj_var_coeffs,
+            "integer_lower_bound_contribution": sum_lower_bound_of_int_vars,
+        }
+        # Single structured log entry
         log.debug(
-            f"Fixed Variable contribution to Objective Function: {sum_fixed_obj_var_coeffs}"
+            "Final optimization summary:\n"
+            + "\n".join(
+                f"{k.replace('_', ' ').title()}: {v}" for k, v in log_data.items()
+            )
         )
-        log.debug(
-            f"Integer variable lower bound contribution: {sum_lower_bound_of_int_vars}"
-        )
-
         # A matrix and b_vec are available. Now, for penalization: $(A.X - B)^{2}$  = $(A.X - B)^{T} * (A.X - B)$
         a_mat = A_coeff.to_numpy()
         nvars += nslacks  # increment the total number of variables by total number of slack variable used
@@ -678,7 +685,11 @@ class Qubo(gp.Model):
         obj_var = self._container["jobj"].records["j"].values[0]
 
         all_vars = self._container["j"].records
-        original_obj_sym = self._og_model._objective_variable.name
+        orig_obj_var = getattr(self._og_model, "_objective_variable", None)
+        if orig_obj_var is not None:
+            original_obj_sym = orig_obj_var.name
+        else:
+            original_obj_sym = f"{self._og_modelName}_objective_variable"
 
         rem_syms = all_vars[all_vars["uni"] != obj_var]["uni"].to_list()
         optimized_vals = self._q_container["x"].records
@@ -788,11 +799,7 @@ class Qubo(gp.Model):
             .to_dict()
         )
         # at the moment `quad` only contains contribution from the objective row.
-        quad_contribution = (
-            x_l.T @ self._quad_val @ x_l
-            if isinstance(self._quad_val, np.ndarray)
-            else 0
-        )
+        quad_contribution = x_l.T @ self._quad_val @ x_l if self._quad_val.size else 0
         orig_jacobian: pd.DataFrame = self._container["A"].records  # A coefficients
         orig_jacobian = orig_jacobian.pivot(
             index="i", columns="j", values="value"
