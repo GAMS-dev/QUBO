@@ -30,6 +30,11 @@ class DwaveBackend(baseBackend):
     def map_solution(self, solution: pd.DataFrame, **kwargs) -> Any:
         container: gp.Container = self.input_data["container"]
         og_model: gp.Model = self.input_data["og_model"]
+        orig_obj_var = getattr(og_model, "_objective_variable", None)
+        if orig_obj_var is not None:
+            original_obj_sym = orig_obj_var.name
+        else:
+            original_obj_sym = f"{og_model.name}_objective_variable"
 
         oldvars = container["x"].records
         oldvars.drop(["level"], inplace=True, axis=1)
@@ -54,7 +59,7 @@ class DwaveBackend(baseBackend):
         final = res.merge(vardict, how="right", on="j")
 
         for symbol in final["symbol"].unique():
-            if symbol == og_model._objective_variable.name:
+            if symbol == original_obj_sym:
                 og_model.container[symbol].records.loc[:, "level"] = kwargs.get(
                     "obj_val"
                 )

@@ -53,15 +53,12 @@ class Qubo(gp.Model):
             raise ValidationError("Qubo() only accepts a >gamspy.Model< object.")
 
         self._og_model: gp.Model = model
-        self._og_modelName: str = model.name
         self._modelName: str = name
-        self._work_dir: str = model.container.working_directory
         self._sense: gp.Sense = model.sense
         self.penalty: int = penalty
-        self._container: gp.Container = self._run_convert(
-            workdir=self._work_dir, **kwargs
-        )
-        self._q_container = gp.Container(working_directory=self._work_dir)
+        _work_dir: str = model.container.working_directory
+        self._container: gp.Container = self._run_convert(workdir=_work_dir, **kwargs)
+        self._q_container = gp.Container(working_directory=_work_dir)
         self.Q: np.ndarray = np.array([])
         self.Qconst: float | None = None
         self._TRANSFORMATION_COMPLETE = False
@@ -76,7 +73,7 @@ class Qubo(gp.Model):
             )
         ) < log.WARN:
             log.basicConfig(
-                filename=f"{self._og_modelName}_reformulation.log",
+                filename=f"{self._og_model.name}_reformulation.log",
                 filemode="w",
                 format="%(message)s",
                 level=log_level,
@@ -94,7 +91,7 @@ class Qubo(gp.Model):
             self._og_model.solve(
                 solver="CONVERT",
                 solver_options={
-                    "dumpgdx": f"{self._og_modelName}.gdx",
+                    "dumpgdx": f"{self._og_model.name}.gdx",
                     "GDXQuadratic": 1,
                     "GDXHessian": 1,
                 },
@@ -104,7 +101,7 @@ class Qubo(gp.Model):
             raise GamspyException("Error while running the >CONVERT< operation.") from e
 
         return gp.Container(
-            load_from=f"{self._og_modelName}.gdx",
+            load_from=f"{self._og_model.name}.gdx",
             working_directory=workdir,
         )
 
@@ -592,8 +589,8 @@ class Qubo(gp.Model):
         """
         self._check_transformation()
 
-        non_zero_indices = np.tril_indices_from(self.Q)  # type: ignore
-        non_zero_values = self.Q[non_zero_indices]  # type: ignore
+        non_zero_indices = np.tril_indices_from(self.Q)
+        non_zero_values = self.Q[non_zero_indices]
         with open(f"QMat_{self._modelName}.qs", "w") as fp:
             fp.write(f"{self.Q.shape[0]} {len(non_zero_values)} {self.Qconst}\n")
             for i, j, value in zip(*non_zero_indices, non_zero_values):
@@ -689,7 +686,7 @@ class Qubo(gp.Model):
         if orig_obj_var is not None:
             original_obj_sym = orig_obj_var.name
         else:
-            original_obj_sym = f"{self._og_modelName}_objective_variable"
+            original_obj_sym = f"{self._og_model.name}_objective_variable"
 
         rem_syms = all_vars[all_vars["uni"] != obj_var]["uni"].to_list()
         optimized_vals = self._q_container["x"].records

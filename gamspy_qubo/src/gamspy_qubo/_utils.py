@@ -63,8 +63,8 @@ def var_contribution(
     Returns:
         np.ndarray of Total contribution of all variables for that constraint
     """
-    cons = slice(None) if cons is None else cons
-    coeffs_of_vars_in_constraint = A.loc[cons, vars.keys()].to_numpy()
+    cons = slice(None) if cons is None else cons  # type: ignore
+    coeffs_of_vars_in_constraint = A.loc[cons, vars.keys()].to_numpy()  # type: ignore
     lb_var_levels = np.array(list(vars.values())).reshape((len(vars), 1))
     if coeffs_of_vars_in_constraint.size > 0:
         return coeffs_of_vars_in_constraint @ lb_var_levels
@@ -142,7 +142,7 @@ def get_lhs_bounds(ele: pd.DataFrame) -> tuple[float, float]:
     Returns:
         lower_bound, upper_bound
     """
-    return ele[ele < 0].sum(), ele[ele > 0].sum()
+    return float(ele[ele < 0].sum()), float(ele[ele > 0].sum())
 
 
 def check_convexity(Q: np.ndarray) -> str:
@@ -157,7 +157,7 @@ def check_convexity(Q: np.ndarray) -> str:
 
 
 def qubo_to_ising(Q: dict, offset: float = 0.0) -> tuple[dict, dict, float]:
-    h = {}
+    h = {}  # type: ignore
     J = {}
     linear_offset = 0.0
     quadratic_offset = 0.0
