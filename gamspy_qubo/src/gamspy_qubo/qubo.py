@@ -1,5 +1,4 @@
 import logging as log
-import re
 
 import gamspy as gp
 import numpy as np
@@ -739,41 +738,32 @@ class Qubo(gp.Model):
                     "level",
                 ] += list(self._vars_with_lower_bounds.values())
 
-        mapper = {}
-        for (
-            _,
-            ele,
-        ) in all_vars.iterrows():  # extract the domain and symbols from the gdx
-            domain = re.findall(r"\((.*?)\)", ele["element_text"])
-            var_sym = re.findall(r"(.+)(?=\()", ele["element_text"])
-            if len(domain) > 0:
-                domain = domain[0].strip(r"\'")
-                if var_sym[0] not in mapper:
-                    mapper[var_sym[0]] = {ele["uni"]: domain}
-                else:
-                    mapper[var_sym[0]][ele["uni"]] = domain
+        pattern = r"(?P<var_sym>.+)\((?P<domain>.*?)\)"
+        extracted = all_vars["element_text"].str.extract(pattern)
+        extracted["domain"] = extracted["domain"].str.replace(r"\'", "", regex=True)
+        extracted["uni"] = all_vars["uni"]
 
-        for vars, ele in mapper.items():
-            newsol = optimized_vals[optimized_vals["i"].isin(ele.keys())].copy(
-                deep=True
-            )
-            newsol["i"] = newsol["i"].map(ele)
-            newsol.rename(columns={"i": "QUBO_label"}, inplace=True)
+        merged_vals = optimized_vals.merge(
+            extracted, left_on="i", right_on="uni", how="inner"
+        )
 
-            newsol = newsol[
-                ["QUBO_label", "level", "marginal", "lower", "upper", "scale"]
-            ]
-            split_labels = newsol["QUBO_label"].str.split(",", expand=True)
-            split_labels.columns = [
+        for var_name, group in merged_vals.groupby("var_sym"):
+            target_symbol = self._og_model.container[var_name]
+            domain_names = [
                 dom if isinstance(dom, str) else dom.name
-                for dom in self._og_model.container[vars].domain
+                for dom in target_symbol.domain
             ]
-            newsol = pd.concat([split_labels, newsol], axis=1)
-            newsol.drop(["QUBO_label"], axis=1, inplace=True)
-            newsol[split_labels.columns] = newsol[split_labels.columns].astype(
-                "category"
+
+            split_labels = group["domain"].str.split(",", expand=True)
+            split_labels.columns = domain_names
+
+            new_records = pd.concat(
+                [split_labels, group[["level", "marginal", "lower", "upper", "scale"]]],
+                axis=1,
             )
-            self._og_model.container[vars].records = newsol.reset_index(drop=True)
+
+            new_records[domain_names] = new_records[domain_names].astype("category")
+            target_symbol.records = new_records.reset_index(drop=True)
 
         """
         The code below is required to calculate the contribution of variables towards the objective using the new levels obtained from the QUBO solve.
