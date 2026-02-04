@@ -697,6 +697,12 @@ class Qubo(gp.Model):
         original_obj_sym = solution["obj_fn_sym"]
         original_obj_val = solution["obj_fn_val"]
 
+        if not is_classic:
+            cols = ["marginal", "lower", "upper", "scale"]
+            optimized_vals = optimized_vals.reindex(
+                columns=optimized_vals.columns.tolist() + cols
+            )
+
         if self._fixed_vars_flag:
             self._fixed_var_vals.rename({"j": "i"}, axis=1, inplace=True)
             optimized_vals = pd.concat(
@@ -823,12 +829,8 @@ class Qubo(gp.Model):
             )
             original_obj_val = total_objective_contribution
 
-        obj_var_coeff: pd.DataFrame = self._q_container[
-            f"{self._modelName}_objective_variable"
-        ].records
-        obj_var_coeff.loc[0, "level"] = original_obj_val
-        self._og_model.container[original_obj_sym].records = obj_var_coeff.reset_index(
-            drop=True
+        self._og_model.container[original_obj_sym].records.loc[:, "level"] = (
+            original_obj_val
         )
 
     @property
