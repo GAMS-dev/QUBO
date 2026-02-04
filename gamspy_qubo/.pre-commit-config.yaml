@@ -4,18 +4,18 @@ repos:
     hooks:
     -   id: check-ast
     -   id: check-case-conflict
-# -   repo: https://github.com/pre-commit/mirrors-mypy
-#     rev: 'v1.16.1'
-#     hooks:
-#     -   id: mypy
-#         files: '^src\/gamspy\/(.*?)$'
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.19.1'
+    hooks:
+    -   id: mypy
+        files: '^gamspy_qubo/src/'
 -   repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
     -   id: detect-secrets
         args: ['--baseline', 'gamspy_qubo/.secrets.baseline']
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.14
+    rev: v0.15.0
     hooks:
     # Run the linter.
     -   id: ruff-check
