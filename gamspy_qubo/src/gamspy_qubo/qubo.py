@@ -770,13 +770,12 @@ class Qubo(gp.Model):
 
         obj_var = self._container["jobj"].records["j"].values[0]
         rem_syms = all_vars[all_vars["uni"] != obj_var]["uni"].to_list()
-        print(f"{rem_syms = }")
-        x_l = optimized_vals[optimized_vals["i"].isin(rem_syms)]["level"].to_numpy()
-        orig_syms_w_new_levels = (
-            optimized_vals[optimized_vals["i"].isin(rem_syms)]
-            .set_index("i")["level"]
-            .to_dict()
-        )
+        mask = optimized_vals["i"].isin(rem_syms)
+        filtered_vals = optimized_vals[mask]
+
+        x_l = filtered_vals["level"].to_numpy()
+        orig_syms_w_new_levels = filtered_vals.set_index("i")["level"].to_dict()
+
         # at the moment `quad` only contains contribution from the objective row.
         quad_contribution = x_l.T @ self._quad_val @ x_l if self._quad_val.size else 0
         orig_jacobian: pd.DataFrame = self._container["A"].records  # A coefficients
@@ -786,6 +785,7 @@ class Qubo(gp.Model):
         linear_contribution = _utils.var_contribution(
             orig_jacobian, orig_syms_w_new_levels, cons=self._obj_eq_name
         ).flatten()[0]
+
         total_objective_contribution = linear_contribution + quad_contribution
         total_objective_contribution = (
             -1 * total_objective_contribution

@@ -105,6 +105,6 @@ class DwaveBackend(baseBackend):
         best_energy = response.first.energy
 
         sol = pd.DataFrame(best_sample.items(), columns=["i", "level"])
-        print(f"Best Energy Found: {best_energy}")
+        # print(f"Best Energy Found: {best_energy}")
 
         return sol, best_energy

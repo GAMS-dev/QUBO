@@ -13,6 +13,7 @@ cost = gp.Parameter(
 x = gp.Variable(m, name="x", type="integer", domain=i)
 
 x.up[i] = 9
+x.fx["b3"] = 5
 
 y = gp.Variable(m, name="y", type="binary", domain=i)
 
@@ -28,7 +29,7 @@ c2 = gp.Equation(m, name="c2")
 c3 = gp.Equation(m, name="c3")
 
 obj[...] = (
-    gp.Sum(i, cost[i] * x[i]) + gp.Sum(i, cost[i] * y[i]) - gp.Sum(i, newX[i]) == z
+    gp.Sum(i, cost[i] * x[i]) + gp.Sum(i, cost[i] * y[i]) - gp.Sum(i, newX[i]) == -z
 )
 
 c1[...] = gp.Sum(i, x[i]) <= 20
@@ -40,13 +41,17 @@ demo_model = gp.Model(
     name="demo_model",
     problem="MIP",
     equations=m.getEquations(),
-    sense=gp.Sense.MAX,
+    sense=gp.Sense.MIN,
     objective=z,
 )
 
-q = Qubo(demo_model, penalty=10)
+# q = Qubo(demo_model, penalty=10, backend="cplex")
+q = Qubo(demo_model, penalty=10, backend="dwave")
 
-q.solve(solver="CPLEX")
+# q.solve()
+q.solve(num_reads=1000)
+# NOTE: I tried with different order of penalties. It gives consistent result for 1e4,
+# anything less gives imprecise and un-accurate results.
 
 print(f"Original Objective Variable:\n{demo_model._objective_variable.records}")
 print(f"Variable x:\n{x.records}")
