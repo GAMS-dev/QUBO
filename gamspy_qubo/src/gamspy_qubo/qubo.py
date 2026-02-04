@@ -630,6 +630,15 @@ class Qubo(gp.Model):
         )
 
     def solve(self, *args, **kwargs) -> pd.DataFrame | None:
+        optimized_variable_values = None
+        objective_function_value = 0
+        is_classic = True
+        orig_obj_var = getattr(self._og_model, "_objective_variable", None)
+        if orig_obj_var is not None:
+            original_obj_sym = orig_obj_var.name
+        else:
+            original_obj_sym = f"{self._og_model.name}_objective_variable"
+
         if not self._TRANSFORMATION_COMPLETE:
             self.transform()
 
@@ -645,8 +654,9 @@ class Qubo(gp.Model):
                 raise GamspyException(
                     f"Something went wrong while solving using >{self._backend}< backend."
                 ) from e
-            # here I should have a solution from cb
+            optimized_variable_values = self._q_container["x"].records
         elif self._backend in SUPPORTED_QUANTUM_BACKENDS:
+            is_classic = False
             _initialize = {"dwave": DwaveBackend}
             input_data = {
                 "q_matrix": self.Q,
@@ -657,7 +667,9 @@ class Qubo(gp.Model):
             }
             _backend = _initialize[self._backend](input_data=input_data)
             try:
-                _backend.solve(*args, **kwargs)
+                optimized_variable_values, objective_function_value = _backend.solve(
+                    *args, **kwargs
+                )
             except Exception as e:
                 raise GamspyException(
                     f"Something went wrong while solving using >{self._backend}< backend."
@@ -667,28 +679,23 @@ class Qubo(gp.Model):
             raise GamspyException(f"Backend {self._backend} not supported.")
 
         # here I can begin mapping the solution back. Standardize the input for mapping the solution for future updates
-        # self._map_solution()
+        solution = {
+            "optimized_vals": optimized_variable_values,
+            "obj_fn_val": objective_function_value,
+            "obj_fn_sym": original_obj_sym,
+        }
+        self._map_solution(solution, is_classic)
 
         return solved if self._backend not in SUPPORTED_QUANTUM_BACKENDS else None
 
-    def _map_classical_solution(self) -> None:
+    def _map_solution(self, solution, is_classic) -> None:
         """
         This function maps the QUBO solution to the original Problem
         """
-        obj_var_coeff: pd.DataFrame = self._q_container[
-            f"{self._modelName}_objective_variable"
-        ].records
-        obj_var = self._container["jobj"].records["j"].values[0]
-
         all_vars = self._container["j"].records
-        orig_obj_var = getattr(self._og_model, "_objective_variable", None)
-        if orig_obj_var is not None:
-            original_obj_sym = orig_obj_var.name
-        else:
-            original_obj_sym = f"{self._og_model.name}_objective_variable"
-
-        rem_syms = all_vars[all_vars["uni"] != obj_var]["uni"].to_list()
-        optimized_vals = self._q_container["x"].records
+        optimized_vals = solution["optimized_vals"]
+        original_obj_sym = solution["obj_fn_sym"]
+        original_obj_val = solution["obj_fn_val"]
 
         if self._fixed_vars_flag:
             self._fixed_var_vals.rename({"j": "i"}, axis=1, inplace=True)
@@ -788,28 +795,38 @@ class Qubo(gp.Model):
         The code below is required to calculate the contribution of variables towards the objective using the new levels obtained from the QUBO solve.
         Since the QUBO solve returns a different level for the objective variable when the optimal solution is not returned, for example, it includes the penalty for every constraint not satisfied.
         """
-        x_l = optimized_vals[optimized_vals["i"].isin(rem_syms)]["level"].to_numpy()
-        orig_syms_w_new_levels = (
-            optimized_vals[optimized_vals["i"].isin(rem_syms)]
-            .set_index("i")["level"]
-            .to_dict()
-        )
-        # at the moment `quad` only contains contribution from the objective row.
-        quad_contribution = x_l.T @ self._quad_val @ x_l if self._quad_val.size else 0
-        orig_jacobian: pd.DataFrame = self._container["A"].records  # A coefficients
-        orig_jacobian = orig_jacobian.pivot(
-            index="i", columns="j", values="value"
-        ).fillna(0)  # arranging in a matrix
-        linear_contribution = _utils.var_contribution(
-            orig_jacobian, orig_syms_w_new_levels, cons=self._obj_eq_name
-        ).flatten()[0]
-        total_objective_contribution = linear_contribution + quad_contribution
-        total_objective_contribution = (
-            -1 * total_objective_contribution
-            if self._obj_var_direction > 0
-            else total_objective_contribution
-        )
-        obj_var_coeff.loc[0, "level"] = total_objective_contribution
+        if is_classic:
+            obj_var = self._container["jobj"].records["j"].values[0]
+            rem_syms = all_vars[all_vars["uni"] != obj_var]["uni"].to_list()
+            x_l = optimized_vals[optimized_vals["i"].isin(rem_syms)]["level"].to_numpy()
+            orig_syms_w_new_levels = (
+                optimized_vals[optimized_vals["i"].isin(rem_syms)]
+                .set_index("i")["level"]
+                .to_dict()
+            )
+            # at the moment `quad` only contains contribution from the objective row.
+            quad_contribution = (
+                x_l.T @ self._quad_val @ x_l if self._quad_val.size else 0
+            )
+            orig_jacobian: pd.DataFrame = self._container["A"].records  # A coefficients
+            orig_jacobian = orig_jacobian.pivot(
+                index="i", columns="j", values="value"
+            ).fillna(0)  # arranging in a matrix
+            linear_contribution = _utils.var_contribution(
+                orig_jacobian, orig_syms_w_new_levels, cons=self._obj_eq_name
+            ).flatten()[0]
+            total_objective_contribution = linear_contribution + quad_contribution
+            total_objective_contribution = (
+                -1 * total_objective_contribution
+                if self._obj_var_direction > 0
+                else total_objective_contribution
+            )
+            original_obj_val = total_objective_contribution
+
+        obj_var_coeff: pd.DataFrame = self._q_container[
+            f"{self._modelName}_objective_variable"
+        ].records
+        obj_var_coeff.loc[0, "level"] = original_obj_val
         self._og_model.container[original_obj_sym].records = obj_var_coeff.reset_index(
             drop=True
         )
