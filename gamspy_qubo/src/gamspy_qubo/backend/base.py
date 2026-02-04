@@ -1,21 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    import pandas as pd
-
 import importlib
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class baseBackend(ABC):
     """Abstract base class that provides a structure to different quantum backends."""
-
-    @abstractmethod
-    def map_solution(self, solution: pd.DataFrame, **kwargs) -> Any:
-        """Maps the solution obtained from the backend back to the original problem."""
-        raise NotImplementedError
 
     @abstractmethod
     def solve(self, *args, **kwargs) -> Any:
