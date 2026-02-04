@@ -670,15 +670,17 @@ class Qubo(gp.Model):
                 optimized_variable_values, objective_function_value = _backend.solve(
                     *args, **kwargs
                 )
+                cols = ["marginal", "lower", "upper", "scale"]
+                optimized_variable_values = optimized_variable_values.reindex(
+                    columns=optimized_variable_values.columns.tolist() + cols
+                )
             except Exception as e:
                 raise GamspyException(
                     f"Something went wrong while solving using >{self._backend}< backend."
                 ) from e
-            # here I should have a solution from qb
         else:
             raise GamspyException(f"Backend {self._backend} not supported.")
 
-        # here I can begin mapping the solution back. Standardize the input for mapping the solution for future updates
         solution = {
             "optimized_vals": optimized_variable_values,
             "obj_fn_val": objective_function_value,
@@ -697,12 +699,6 @@ class Qubo(gp.Model):
         original_obj_sym = solution["obj_fn_sym"]
         original_obj_val = solution["obj_fn_val"]
 
-        if not is_classic:
-            cols = ["marginal", "lower", "upper", "scale"]
-            optimized_vals = optimized_vals.reindex(
-                columns=optimized_vals.columns.tolist() + cols
-            )
-
         if self._fixed_vars_flag:
             self._fixed_var_vals.rename({"j": "i"}, axis=1, inplace=True)
             optimized_vals = pd.concat(
@@ -710,51 +706,33 @@ class Qubo(gp.Model):
             )
 
         if self._int_vars_flag:
-            # check if integer variable exist. If yes, combine and merge the solution of converted binary variables to their integer representation
-            int_bin_vals_unstack = self._int_bin_vals.unstack().reset_index()
-            int_bin_vals_unstack.drop(
-                int_bin_vals_unstack[int_bin_vals_unstack[0] == 0].index, inplace=True
+            int_bin_map = self._int_bin_vals.unstack()
+            int_bin_map = int_bin_map[int_bin_map != 0].reset_index()  # type: ignore
+
+            opt_lookup = optimized_vals.set_index("i")["level"]
+            int_bin_map["final_level"] = int_bin_map[0] * int_bin_map["binName"].map(
+                opt_lookup
             )
-            bin_to_int_vals = pd.merge(
-                int_bin_vals_unstack,
-                optimized_vals,
-                how="left",
-                left_on="binName",
-                right_on="i",
-            )
-            bin_to_int_vals["final_level"] = (
-                bin_to_int_vals[0] * bin_to_int_vals["level"]
-            )
-            bin_to_int_vals = (
-                bin_to_int_vals.groupby("intName")["final_level"].sum().reset_index()
-            )
+
+            int_summary = int_bin_map.groupby("intName")["final_level"].sum()
 
             original_int_vals = self._container["x"].records
             original_int_vals = original_int_vals[
-                original_int_vals["j"].isin(bin_to_int_vals["intName"])
-            ].copy(deep=True)
-            original_int_vals = pd.merge(
-                original_int_vals,
-                bin_to_int_vals,
-                left_on="j",
-                right_on="intName",
-                how="left",
-            )
-            original_int_vals.drop(["level", "intName"], axis=1, inplace=True)
-            original_int_vals.rename(
-                {"j": "i", "final_level": "level"}, axis=1, inplace=True
-            )
-            original_int_vals = original_int_vals[
-                ["i", "level", "marginal", "lower", "upper", "scale"]
-            ]
+                original_int_vals["j"].isin(int_summary.index)
+            ].copy()
 
-            optimized_vals.drop(
-                optimized_vals[optimized_vals.i.isin(self._binName_list)].index,
-                inplace=True,
-            )
+            original_int_vals["level"] = original_int_vals["j"].map(int_summary)
+            original_int_vals.rename(columns={"j": "i"}, inplace=True)
+
+            cols = ["i", "level", "marginal", "lower", "upper", "scale"]
+            original_int_vals = original_int_vals[cols]
+            optimized_vals = optimized_vals[
+                ~optimized_vals["i"].isin(self._binName_list)
+            ]
             optimized_vals = pd.concat(
                 [optimized_vals, original_int_vals], ignore_index=True
             )
+
             if self._vars_with_lower_bounds:
                 optimized_vals.loc[
                     optimized_vals["i"].isin(self._vars_with_lower_bounds.keys()),
