@@ -10,6 +10,9 @@ from gamspy_qubo import _utils
 from gamspy_qubo.backend import DwaveBackend
 
 LOG_LEVEL_DICT = {0: log.WARN, 1: log.INFO, 2: log.DEBUG}
+SUPPORTED_QUANTUM_BACKENDS = [
+    "dwave"
+]  # append this list when adding new quantum backend
 
 
 class Qubo(gp.Model):
@@ -56,11 +59,11 @@ class Qubo(gp.Model):
         self._modelName: str = name
         self._sense: gp.Sense = model.sense
         self.penalty: int = penalty
-        _work_dir: str = model.container.working_directory
+        _work_dir = model.container.working_directory
         self._container: gp.Container = self._run_convert(workdir=_work_dir, **kwargs)
         self._q_container = gp.Container(working_directory=_work_dir)
         self.Q: np.ndarray = np.array([])
-        self.Qconst: float | None = None
+        self.Qconst: float = 0.0
         self._TRANSFORMATION_COMPLETE = False
         self._backend = backend.lower()
 
@@ -633,18 +636,18 @@ class Qubo(gp.Model):
         if f"{self._modelName}_objective" not in self._q_container.data:
             self._model()
 
-        if self._backend not in ["dwave"]:
+        if self._backend not in SUPPORTED_QUANTUM_BACKENDS:
             try:
                 kwargs.setdefault("solver", self._backend)
                 solved = super().solve(*args, **kwargs)
-                self._map_classical_solution()
-                return solved
+                _utils.check_classical_solve(solveStatus=super().solve_status)
             except Exception as e:
                 raise GamspyException(
-                    f"Something went wrong while solving QUBO.\nMessage: {e}"
+                    f"Something went wrong while solving using >{self._backend}< backend."
                 ) from e
-        elif self._backend in ["dwave"]:
-            _initialize_backend = {"dwave": DwaveBackend}
+            # here I should have a solution from cb
+        elif self._backend in SUPPORTED_QUANTUM_BACKENDS:
+            _initialize = {"dwave": DwaveBackend}
             input_data = {
                 "q_matrix": self.Q,
                 "q_const": self.Qconst,
@@ -652,30 +655,26 @@ class Qubo(gp.Model):
                 "container": self._container,
                 "og_model": self._og_model,
             }
-            _backend = _initialize_backend[self._backend](input_data=input_data)
-            _backend.solve(*args, **kwargs)
-
+            _backend = _initialize[self._backend](input_data=input_data)
+            try:
+                _backend.solve(*args, **kwargs)
+            except Exception as e:
+                raise GamspyException(
+                    f"Something went wrong while solving using >{self._backend}< backend."
+                ) from e
+            # here I should have a solution from qb
         else:
             raise GamspyException(f"Backend {self._backend} not supported.")
 
-        return None
+        # here I can begin mapping the solution back. Standardize the input for mapping the solution for future updates
+        # self._map_solution()
+
+        return solved if self._backend not in SUPPORTED_QUANTUM_BACKENDS else None
 
     def _map_classical_solution(self) -> None:
         """
         This function maps the QUBO solution to the original Problem
         """
-        solveStatus = super().solve_status
-        assert solveStatus is not None, GamspyException(
-            "Solver status is None. Solve the model first."
-        )
-
-        if solveStatus.value in [2, 3, 5, 8]:
-            # Continue mapping incumbant solution if solve_status is one of *Interrupt.
-            pass
-
-        elif solveStatus.value != 1:
-            raise GamspyException("Solver did not yield NormalCompletion.")
-
         obj_var_coeff: pd.DataFrame = self._q_container[
             f"{self._modelName}_objective_variable"
         ].records

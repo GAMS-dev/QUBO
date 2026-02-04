@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
-from gamspy.exceptions import ValidationError
+from gamspy.exceptions import GamspyException, ValidationError
+
+if TYPE_CHECKING:
+    from gamspy import SolveStatus
 
 
 def validate_value(value: int, allowed_values: list, param_name: str) -> int:
@@ -198,3 +203,19 @@ def triu(Q_matrix: np.ndarray):
     upper_mask = np.triu(np.ones_like(Q_matrix), k=1)  # 1 above diagonal, 0 elsewhere
     scaled_upper = Q_matrix * (1 + upper_mask)  # Double above diagonal
     return np.triu(scaled_upper)
+
+
+def check_classical_solve(solveStatus: SolveStatus | None):
+    assert solveStatus is not None, GamspyException(
+        "Solver status is None. Solve the model first."
+    )
+
+    if solveStatus.value in [2, 3, 8]:
+        # Continue mapping incumbant solution if solve_status is one of
+        # [UserInterrupt, ResourceInterrupt, IterationInterrupt].
+        pass
+
+    elif solveStatus.value != 1:
+        raise GamspyException(
+            f"Solver did not yield NormalCompletion. Solver status = {solveStatus}"
+        )

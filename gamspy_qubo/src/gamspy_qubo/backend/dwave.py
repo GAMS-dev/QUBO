@@ -106,4 +106,6 @@ class DwaveBackend(baseBackend):
 
         sol = pd.DataFrame(best_sample.items(), columns=["j", "level"])
         print(f"Best Energy Found: {best_energy}")
-        self.map_solution(solution=sol, obj_val=best_energy)
+
+        return sol, best_energy
+        # self.map_solution(solution=sol, obj_val=best_energy)
