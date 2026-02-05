@@ -2,15 +2,48 @@ from __future__ import annotations
 
 import importlib
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    import pandas as pd
+    from gamspy import Sense
 
 
 class baseBackend(ABC):
     """Abstract base class that provides a structure to different quantum backends."""
 
+    def __init__(
+        self,
+        q_matrix: np.ndarray,
+        q_variables: list[str],
+        q_constant: float | int,
+        sense: Sense,
+    ):
+        """
+        :param q_matrix: QUBO Matrix
+        :type q_matrix: np.ndarray
+        :param q_variables: List of variables that are associated with the QUBO
+        :type q_variables: list[str]
+        :param q_constant: the offset penalty term
+        :type q_constant: float | int
+        :param sense: direction of optimization, i.e, Min. or Max.
+        :type sense: Sense
+        """
+        self.q_matrix = q_matrix
+        self.q_variables = q_variables
+        self.q_constant = q_constant
+        self.sense = sense
+
     @abstractmethod
-    def solve(self, *args, **kwargs) -> Any:
-        """Solve the problem using quantum backend"""
+    def solve(self, *args, **kwargs) -> pd.DataFrame:
+        """Solve the problem using quantum backend
+
+        Returns:
+            A pandas.DataFrame that must have the following structure,
+            `columns = ["i", "level"]`, where `i` contains vairable and
+            `level` is the corresponding value of the variable after solving.
+        """
         raise NotImplementedError
 
     @staticmethod

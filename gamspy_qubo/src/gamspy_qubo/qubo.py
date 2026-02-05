@@ -632,7 +632,6 @@ class Qubo(gp.Model):
 
     def solve(self, *args, **kwargs) -> pd.DataFrame | None:
         optimized_variable_values = None
-        objective_function_value = 0
         orig_obj_var = getattr(self._og_model, "_objective_variable", None)
         if orig_obj_var is not None:
             original_obj_sym = orig_obj_var.name
@@ -657,18 +656,20 @@ class Qubo(gp.Model):
             optimized_variable_values = self._q_container["x"].records
         elif self._backend in SUPPORTED_QUANTUM_BACKENDS:
             _initialize = {"dwave": DwaveBackend}
-            input_data = {
-                "q_matrix": self.Q,
-                "q_const": self.Qconst,
-                "q_vars": self._q_container["qi"].records["uni"].tolist(),
-                "container": self._container,
-                "og_model": self._og_model,
-            }
-            _backend = _initialize[self._backend](input_data=input_data)
+            _backend = _initialize[self._backend](
+                q_matrix=self.Q,
+                q_variables=self._q_container["qi"].records["uni"].tolist(),
+                q_constant=self.Qconst,
+                sense=self._sense,
+            )
+            _backend = _initialize[self._backend](
+                q_matrix=self.Q,
+                q_variables=self._q_container["qi"].records["uni"].tolist(),
+                q_constant=self.Qconst,
+                sense=self._sense,
+            )
             try:
-                optimized_variable_values, objective_function_value = _backend.solve(
-                    *args, **kwargs
-                )
+                optimized_variable_values = _backend.solve(*args, **kwargs)
                 cols = ["marginal", "lower", "upper", "scale"]
                 optimized_variable_values = optimized_variable_values.reindex(
                     columns=optimized_variable_values.columns.tolist() + cols
@@ -682,7 +683,6 @@ class Qubo(gp.Model):
 
         solution = {
             "optimized_vals": optimized_variable_values,
-            "obj_fn_val": objective_function_value,
             "obj_fn_sym": original_obj_sym,
         }
         self._map_solution(solution)
@@ -696,7 +696,6 @@ class Qubo(gp.Model):
         all_vars = self._container["j"].records
         optimized_vals = solution["optimized_vals"]
         original_obj_sym = solution["obj_fn_sym"]
-        original_obj_val = solution["obj_fn_val"]
 
         if self._fixed_vars_flag:
             self._fixed_var_vals.rename({"j": "i"}, axis=1, inplace=True)
@@ -780,12 +779,12 @@ class Qubo(gp.Model):
 
         # at the moment `quad` only contains contribution from the objective row.
         quad_contribution = x_l.T @ self._quad_val @ x_l if self._quad_val.size else 0
-        orig_jacobian: pd.DataFrame = self._container["A"].records  # A coefficients
-        orig_jacobian = orig_jacobian.pivot(
-            index="i", columns="j", values="value"
-        ).fillna(0)  # arranging in a matrix
+        jacobian: pd.DataFrame = self._container["A"].records  # A coefficients
+        jacobian = jacobian.pivot(index="i", columns="j", values="value").fillna(
+            0
+        )  # arranging in a matrix
         linear_contribution = _utils.var_contribution(
-            orig_jacobian, orig_syms_w_new_levels, cons=self._obj_eq_name
+            jacobian, orig_syms_w_new_levels, cons=self._obj_eq_name
         ).flatten()[0]
 
         total_objective_contribution = linear_contribution + quad_contribution
@@ -794,11 +793,12 @@ class Qubo(gp.Model):
             if self._obj_var_direction > 0
             else total_objective_contribution
         )
-        original_obj_val = total_objective_contribution
 
-        self._og_model.container[original_obj_sym].records.loc[:, "level"] = (
-            original_obj_val
-        )
+        obj_var_coeff: gp.Variable = self._q_container[
+            f"{self._modelName}_objective_variable"
+        ]
+        obj_var_coeff.l = total_objective_contribution
+        self._og_model.container[original_obj_sym].records = obj_var_coeff.records
 
     @property
     def qubo(self):
