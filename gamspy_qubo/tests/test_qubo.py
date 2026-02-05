@@ -341,7 +341,7 @@ def test_qubo_valid_solution(data):
     test_qubo.solve(solver="CPLEX")
 
     assert 22 == test_qubo.objective_value, "Objective value is wrong."
-    assert 22 == z.l.records, "Mapped Objective value is wrong."
+    assert 22 == z.l.records.loc[0, "level"], "Mapped Objective value is wrong."
     assert 3 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
 
 
@@ -381,5 +381,5 @@ def test_qubo_with_integer_variable(data):
     test_qubo.solve(solver="CPLEX")
 
     assert 96 == test_qubo.objective_value, "Objective value is wrong."
-    assert 96 == z.l.records, "Mapped Objective value is wrong."
+    assert 96 == z.l.records.loc[0, "level"], "Mapped Objective value is wrong."
     assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
