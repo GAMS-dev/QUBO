@@ -123,7 +123,7 @@ class Qubo(gp.Model):
         Returns:
             qd: gp.Parameter: the Q Matrix
             qi: gp.Set: binary variables participating in the QUBO
-            qconst: gp.Parameter: the offset calcluated based on the penalty provided.
+            qconst: gp.Parameter: the offset calculated based on the penalty provided.
         """
         if penalty is None:
             penalty = self.penalty
@@ -195,7 +195,7 @@ class Qubo(gp.Model):
 
         """
         Check if there are any fixed variables in the gdx, i.e., lb=ub=level of any variable.
-        If such variables exist, separate them from the list of non-fixed vairables and treat them as constanst in the objective function.
+        If such variables exist, separate them from the list of non-fixed variables and treat them as constants in the objective function.
 
         We also need to check if the level of variables are set and handle them separately
         """
@@ -344,7 +344,7 @@ class Qubo(gp.Model):
 
         cons = eq_data[-eq_data["i"].isin(self._obj_eq_name)].reset_index(
             drop=True
-        )  # fetch only the constrainsts and not the objective equation
+        )  # fetch only the constraints and not the objective equation
         nvars = len(bin_vars)
         nslacks = 0
         self._obj_var_direction = raw_a[obj_var].loc[self._obj_eq_name].to_numpy()
@@ -363,33 +363,33 @@ class Qubo(gp.Model):
         """
 
         # Case 1 implementation
-        special_cons_case_1_lable = [
+        special_cons_case_1_label = [
             ele.i for _, ele in cons.iterrows() if ele.upper == 1 and ele.lower != 1
         ]
-        if special_cons_case_1_lable:
-            case1_cons = raw_a[bin_vars].loc[special_cons_case_1_lable]
+        if special_cons_case_1_label:
+            case1_cons = raw_a[bin_vars].loc[special_cons_case_1_label]
             case1_cons = _utils.check_row_entries(case1_cons.copy())
-            case1_cons_index_lable = list(case1_cons.index)
+            case1_cons_index_label = list(case1_cons.index)
             case1_penalty = case1_cons.to_numpy()
             if case1_penalty.size > 0:
                 case1_penalty = (case1_penalty.T @ case1_penalty) / 2
                 np.fill_diagonal(case1_penalty, np.zeros((1, len(bin_vars))))
             else:  # if there are no rows with only 0/1 entries
                 case1_penalty = np.zeros((nvars, nvars))
-            log.debug(f"\nSpecial constraint case 1:\n{special_cons_case_1_lable}")
+            log.debug(f"\nSpecial constraint case 1:\n{special_cons_case_1_label}")
         else:
-            case1_cons_index_lable = []
+            case1_cons_index_label = []
             case1_penalty = np.zeros((nvars, nvars))
 
         # Case 2 implementation
-        special_cons_case_2_lable = [
+        special_cons_case_2_label = [
             ele.i for _, ele in cons.iterrows() if ele.lower == 1 and ele.upper != 1
         ]
-        if special_cons_case_2_lable:
-            case2_cons = raw_a[bin_vars].loc[special_cons_case_2_lable]
+        if special_cons_case_2_label:
+            case2_cons = raw_a[bin_vars].loc[special_cons_case_2_label]
             case2_cons = _utils.check_row_entries(case2_cons.copy())
             case2_cons = case2_cons[case2_cons.sum(axis=1) == 2]
-            case2_cons_index_lable = list(case2_cons.index)
+            case2_cons_index_label = list(case2_cons.index)
             case2_penalty = case2_cons.to_numpy()
             if case2_penalty.size > 0:
                 case2_penalty = (case2_penalty.T @ case2_penalty) / 2
@@ -397,15 +397,15 @@ class Qubo(gp.Model):
                 case2_penalty[case2_diag] *= -2
             else:  # if there are no rows with two 1s in them
                 case2_penalty = np.zeros((nvars, nvars))
-            log.debug(f"\nSpecial constraint case 2:\n{special_cons_case_2_lable}")
+            log.debug(f"\nSpecial constraint case 2:\n{special_cons_case_2_label}")
 
         else:
-            case2_cons_index_lable = []
+            case2_cons_index_label = []
             case2_penalty = np.zeros((nvars, nvars))
 
-        final_special_cons = case1_cons_index_lable + case2_cons_index_lable
+        final_special_cons = case1_cons_index_label + case2_cons_index_label
         final_special_penalty = case1_penalty + case2_penalty
-        case2_penalty_offset_factor = len(case2_cons_index_lable)
+        case2_penalty_offset_factor = len(case2_cons_index_label)
 
         is_max = True if self._sense == gp.Sense.MAX else False
         P = -1 * penalty if is_max else penalty  # penalty term for classic solvers

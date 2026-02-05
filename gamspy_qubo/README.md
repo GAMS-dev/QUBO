@@ -11,6 +11,8 @@ cd qubo/gamspy_qubo
 
 ### 2. Create and activate a virtual environment
 
+Note: This project uses `uv` as the environment management tool. It is recommended to use it with `uv`.
+
 #### macOS / Linux:
 
 ```bash
