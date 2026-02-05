@@ -376,9 +376,10 @@ def test_qubo_with_integer_variable(data):
         objective=z,
     )
 
-    test_qubo = Qubo(test1, penalty=10)
-    test_qubo.solve(solver="CPLEX")
+    test_qubo = Qubo(test1, penalty=10, backend="cplex")
+    test_qubo.solve()
 
+    # print(f"{z.l.records = }", flush=True)
     assert 96 == test_qubo.objective_value, "Objective value is wrong."
-    assert 96 == z.l.records, "Mapped Objective value is wrong."
+    assert [96] == z.l.records.values.tolist()[0], "Mapped Objective value is wrong."
     assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."

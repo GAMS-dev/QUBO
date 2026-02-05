@@ -199,17 +199,18 @@ class Qubo(gp.Model):
 
         We also need to check if the level of variables are set and handle them separately
         """
+        lower_mask = (all_var_vals["lower"] > 0) & (
+            all_var_vals["lower"] != all_var_vals["upper"]
+        )
+        fixed_mask = (all_var_vals["level"] == all_var_vals["lower"]) & (
+            all_var_vals["level"] == all_var_vals["upper"]
+        )
 
-        self._vars_with_lower_bounds = {
-            var.j: var.lower
-            for _, var in all_var_vals.iterrows()
-            if (var.lower > 0) and (var.lower != var.upper)
-        }  # would only contain, integer varaibles with lower bound defined
-        fixed_vars = {
-            var.j: var.level
-            for _, var in all_var_vals.iterrows()
-            if (var.level == var.lower) and (var.level == var.upper)
-        }  # check for fixed variables
+        self._vars_with_lower_bounds = dict(
+            all_var_vals[lower_mask][["j", "lower"]].values
+        )
+        fixed_vars = dict(all_var_vals[fixed_mask][["j", "level"]].values)
+
         fixed_and_lower_bounds = {**self._vars_with_lower_bounds, **fixed_vars}
         sum_fixed_obj_var_coeffs = 0.0
 
@@ -242,11 +243,12 @@ class Qubo(gp.Model):
             contribution = _utils.var_contribution(raw_a, fixed_and_lower_bounds)
             eq_data.loc[:, ["lower", "upper"]] -= contribution
             if fixed_vars:
+                fixed_set = set(fixed_vars.keys())
                 self._fixed_vars_flag = True
                 log.info(f"\nList of Fixed Variables:\n{fixed_vars}")
                 # remove the fixed variables from computation
-                bin_vars = [var for var in bin_vars if var not in fixed_vars]
-                int_vars = [var for var in int_vars if var not in fixed_vars]
+                bin_vars = [var for var in bin_vars if var not in fixed_set]
+                int_vars = [var for var in int_vars if var not in fixed_set]
                 sum_fixed_obj_var_coeffs += np.ndarray.item(
                     _utils.var_contribution(raw_a, fixed_vars, cons=self._obj_eq_name)
                 )
