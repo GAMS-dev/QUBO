@@ -41,7 +41,7 @@ class baseBackend(ABC):
 
         Returns:
             A pandas.DataFrame that must have the following structure,
-            `columns = ["i", "level"]`, where `i` contains vairable and
+            `columns = ["i", "level"]`, where `i` contains variable and
             `level` is the corresponding value of the variable after solving.
         """
         raise NotImplementedError

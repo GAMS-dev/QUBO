@@ -121,7 +121,7 @@ def gen_slacks(var_range: float) -> np.ndarray:
         var_range: upper bound of variable
 
     Returns:
-        Numpy array containing slack co-efficients
+        Numpy array containing slack coefficients
 
     example:
         if var_range=5, then gen_slacks(5) returns [1, 2, 2]
@@ -142,7 +142,7 @@ def get_lhs_bounds(ele: pd.DataFrame) -> tuple[float, float]:
     helper function to find the bounds of a constraint
 
     Args:
-        ele: The coefficents of the constraint
+        ele: The coefficients of the constraint
 
     Returns:
         lower_bound, upper_bound
@@ -211,7 +211,7 @@ def check_classical_solve(solveStatus: SolveStatus | None):
     )
 
     if solveStatus.value in [2, 3, 8]:
-        # Continue mapping incumbant solution if solve_status is one of
+        # Continue mapping incumbent solution if solve_status is one of
         # [UserInterrupt, ResourceInterrupt, IterationInterrupt].
         pass
 

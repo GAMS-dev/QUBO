@@ -662,14 +662,12 @@ class Qubo(gp.Model):
                 q_constant=self.Qconst,
                 sense=self._sense,
             )
-            _backend = _initialize[self._backend](
-                q_matrix=self.Q,
-                q_variables=self._q_container["qi"].records["uni"].tolist(),
-                q_constant=self.Qconst,
-                sense=self._sense,
-            )
             try:
                 optimized_variable_values = _backend.solve(*args, **kwargs)
+                assert isinstance(optimized_variable_values, pd.DataFrame), (
+                    "backend.solve() must return a `pd.DataFrame`. "
+                    "Refer to the return structue of `baseBackend.solve` for more details."
+                )
                 cols = ["marginal", "lower", "upper", "scale"]
                 optimized_variable_values = optimized_variable_values.reindex(
                     columns=optimized_variable_values.columns.tolist() + cols
