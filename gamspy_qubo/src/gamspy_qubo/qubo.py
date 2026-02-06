@@ -31,15 +31,13 @@ class Qubo(gp.Model):
         Enable logging information.
         Options are {0 = WARN, 1 = INFO, 2 = DEBUG}.
         By default it is 0.
-    backend: str | "cplex"
-        Select the backend to solve the QUBO. Support all the QUBO solvers that comes with GAMSPy, for e.g., `SCIP`, `CPLEX`, etc. Default solver is `SBB`.
-        "dwave": At the moment, Dwave's `SimulatedAnnealing` backend is supported.
-                 We plan to add more backends in the future.
 
     Notes
     -----
-    We first use the `CONVERT` solver to generate a standardized version of the original problem.
-    One can also pass keyword arguments to the `CONVERT` solver, for. e.g., `options=gp.Options(hold_fixed_variables=True)`
+    - Currenty two quantum solvers, ("dwave", "kipu"), are supported.
+    - The desired quantum solver can be set using the `solver` keyword argument in the `model.solve()` call. (default = "cplex")
+    - We first use the `CONVERT` solver to generate a standardized version of the original problem.
+    - One can also pass keyword arguments to the `CONVERT` solver, for. e.g., `options=gp.Options(hold_fixed_variables=True)`
     """
 
     def __init__(
@@ -49,7 +47,6 @@ class Qubo(gp.Model):
         name: str = "QUBO",
         penalty: int = 1,
         log_on: int = 0,
-        backend: str = "cplex",
         **kwargs,
     ):
         if not isinstance(model, gp.Model):
@@ -65,7 +62,7 @@ class Qubo(gp.Model):
         self.Q: np.ndarray = np.array([])
         self.Qconst: float = 0.0
         self._TRANSFORMATION_COMPLETE = False
-        self._backend = backend.lower()
+        self._MAPPING_COMPLETE = False
 
         if (
             log_level := LOG_LEVEL_DICT.get(
@@ -632,6 +629,8 @@ class Qubo(gp.Model):
         )
 
     def solve(self, *args, **kwargs) -> pd.DataFrame | None:
+        kwargs.setdefault("solver", "cplex")
+        self._backend = kwargs.get("solver")
         optimized_variable_values = None
         orig_obj_var = getattr(self._og_model, "_objective_variable", None)
         if orig_obj_var is not None:
@@ -647,7 +646,6 @@ class Qubo(gp.Model):
 
         if self._backend not in SUPPORTED_QUANTUM_BACKENDS:
             try:
-                kwargs.setdefault("solver", self._backend)
                 solved = super().solve(*args, **kwargs)
                 _utils.check_classical_solve(solveStatus=super().solve_status)
             except Exception as e:
@@ -798,6 +796,7 @@ class Qubo(gp.Model):
         ]
         obj_var_coeff.l = total_objective_contribution
         self._og_model.container[original_obj_sym].records = obj_var_coeff.records
+        self._MAPPING_COMPLETE = True
 
     @property
     def qubo(self):
@@ -848,3 +847,21 @@ class Qubo(gp.Model):
             An upper triangular matrix
         """
         return _utils.triu(Q)
+
+    def check_feasibility(self):
+        import io
+
+        stream = io.StringIO()
+        self._og_model.solve(
+            solver="examiner",
+            solver_options={"examineInitPoint": 1, "objvarAutoAdjust": 1},
+            output=stream,
+        )
+        result = _utils.parse_examiner_output(text=stream.getvalue())
+
+        if not self._MAPPING_COMPLETE:
+            result["WARNING"] = (
+                "Model must be solved before checking feasibility of the QUBO solution."
+            )
+
+        return result
