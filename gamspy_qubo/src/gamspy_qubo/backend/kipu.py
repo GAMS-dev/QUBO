@@ -59,11 +59,9 @@ class KipuBackend(baseBackend):
         rows, cols = ut_mat.nonzero()
         for i, j in zip(rows, cols):
             if i == j:
-                problem[f"({self.q_variables[i]}, )"] = ut_mat[i, j]  # diagonal terms
+                problem[f"({i},)"] = ut_mat[i, j]  # diagonal terms
             else:
-                problem[f"({self.q_variables[i]}, {self.q_variables[j]})"] = ut_mat[
-                    i, j
-                ]  # off-diagonal terms
+                problem[f"({i}, {j})"] = ut_mat[i, j]  # off-diagonal terms
         problem["()"] = self.q_constant  # constant
 
         request_defaults = {"shots": 1000, "num_iterations": 3, "num_greedy_passes": 0}
@@ -71,14 +69,25 @@ class KipuBackend(baseBackend):
             key: kwargs.get(key, default_value)
             for key, default_value in request_defaults.items()
         }
-        request = {
+        request = {  # noqa: F841
             "problem": problem,
             "problem_type": "binary",
             **filtered_kwargs,
         }
-        service_exec = client.run(request)
-        print(f"JOB ID: {service_exec.id}")
+        # self.service_exec = client.run(request) # send job
+        # # service_exec.wait_for_final_state()
 
-        sol = pd.DataFrame()
+        service_exec = client.get_service_execution(
+            service_execution_id="3d549b05-619e-4a18-a57a-fbca0df7f12f"
+        )  # retrieve result once status = Succeeded
+        result = service_exec.result().result
+
+        _sol = {
+            self.q_variables[int(k)]: v for k, v in result["mapped_solution"].items()
+        }
+        sol = pd.DataFrame(
+            _sol.items(),
+            columns=["i", "level"],
+        )
 
         return sol

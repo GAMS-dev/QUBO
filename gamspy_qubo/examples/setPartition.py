@@ -1,3 +1,5 @@
+import os
+
 import gamspy as gp
 import pandas as pd
 
@@ -45,9 +47,13 @@ setPartition = gp.Model(
     objective=z,
 )
 
-q = Qubo(setPartition, penalty=10)
+q = Qubo(setPartition, penalty=10, backend="kipu")
+ACCESS_KEY_ID = os.environ["PLANQ_APP_ACCESS_KEY_ID"]
+SECRET_ACCESS_KEY = os.environ["PLANQ_APP_SECRET_ACCESS_KEY"]
 
-q.solve(solver="CPLEX")
+### shape = (6,6)
+q.solve(secret_access_key=SECRET_ACCESS_KEY, access_key_id=ACCESS_KEY_ID)
+# q.solve()
 
 print(f"Original Objective Variable:\n{setPartition._objective_variable.records}")
 print(f"Variable x:\n{x.records}")
