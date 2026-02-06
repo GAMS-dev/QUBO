@@ -53,7 +53,6 @@ SECRET_ACCESS_KEY = os.environ["PLANQ_APP_SECRET_ACCESS_KEY"]
 
 ### shape = (6,6)
 q.solve(secret_access_key=SECRET_ACCESS_KEY, access_key_id=ACCESS_KEY_ID)
-# q.solve()
 
 print(f"Original Objective Variable:\n{setPartition._objective_variable.records}")
 print(f"Variable x:\n{x.records}")

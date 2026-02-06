@@ -43,6 +43,10 @@ class KipuBackend(baseBackend):
 
         Note: Follows the general return structure defined in `baseBackend.solve`
         """
+        assert self.q_matrix.shape[0] <= 20, (
+            f"Miray Optimizer only supports 20 qubits. This QUBO has {self.q_matrix.shape[0]} variables."
+        )
+
         print("\n--- Starting Kipu Optimizer ---")
         planq_service_client = importlib.import_module("planqk.service.client")
         client = planq_service_client.PlanqkServiceClient(
@@ -51,10 +55,10 @@ class KipuBackend(baseBackend):
             secret_access_key=kwargs.get("secret_access_key"),
             token_endpoint="https://gateway.hub.kipu-quantum.com/token",
         )
+
         multiplier = -1 if self.sense.value == "MAX" else 1
         ut_mat = triu(self.q_matrix)
         ut_mat *= multiplier
-
         problem = {}
         rows, cols = ut_mat.nonzero()
         for i, j in zip(rows, cols):
@@ -69,21 +73,18 @@ class KipuBackend(baseBackend):
             key: kwargs.get(key, default_value)
             for key, default_value in request_defaults.items()
         }
-        request = {  # noqa: F841
+        request = {
             "problem": problem,
             "problem_type": "binary",
             **filtered_kwargs,
         }
-        # self.service_exec = client.run(request) # send job
-        # # service_exec.wait_for_final_state()
+        service_exec = client.run(request)  # send job
+        print(f"JOB ID: {service_exec.id} | Waiting...")
 
-        service_exec = client.get_service_execution(
-            service_execution_id="3d549b05-619e-4a18-a57a-fbca0df7f12f"
-        )  # retrieve result once status = Succeeded
-        result = service_exec.result().result
-
+        result = service_exec.result()
+        response = result.result
         _sol = {
-            self.q_variables[int(k)]: v for k, v in result["mapped_solution"].items()
+            self.q_variables[int(k)]: v for k, v in response["mapped_solution"].items()
         }
         sol = pd.DataFrame(
             _sol.items(),
