@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gamspy_qubo"
-version = "0.1.0"
+version = "0.2.0"
 description = "A GAMSPy implemention of classic GAMS-QUBO reformulation."
 authors = [
   { name = "GAMS Development Corporation", email = "support@gams.com" },
