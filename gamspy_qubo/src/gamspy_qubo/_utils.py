@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -219,3 +220,25 @@ def check_classical_solve(solveStatus: SolveStatus | None):
         raise GamspyException(
             f"Solver did not yield NormalCompletion. Solver status = {solveStatus}"
         )
+
+
+def parse_examiner_output(text):
+    if "Primal constraints satisfied" in text:
+        return {"feasible": True, "message": "Solution is feasible."}
+
+    match = re.search(
+        r"Primal infeasible.*?Max violation:\s+(.*?):\s+(.*)", text, re.DOTALL
+    )
+
+    if match:
+        constraint_name = match.group(1).strip()
+        violation_details = match.group(2).split("\n")[0].strip()
+        return {
+            "feasible": False,
+            "message": f"Infeasible: {constraint_name} violates bounds ({violation_details})",
+        }
+
+    return {
+        "feasible": False,
+        "message": "Examiner failed or returned unexpected format.",
+    }
