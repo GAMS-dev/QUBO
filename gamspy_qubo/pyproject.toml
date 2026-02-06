@@ -15,14 +15,6 @@ dependencies = [
   "gamspy >= 1.11.0"
 ]
 
-[project.optional-dependencies]
-test = [
-  "pytest >= 8.4.1",
-]
-dwave = [
-  "dwave-ocean-sdk",
-]
-
 [project.urls]
 repository = "https://github.com/GAMS-dev/qubo"
 
@@ -100,4 +92,10 @@ dev = [
     "ruff>=0.14.14",
     "types-pygments>=2.19.0.20251121",
     "types-requests>=2.32.4.20260107",
+]
+dwave = [
+  "dwave-ocean-sdk",
+]
+kipu = [
+  "planqk-service-sdk",
 ]

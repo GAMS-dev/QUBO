@@ -6,11 +6,12 @@ import pandas as pd
 from gamspy.exceptions import GamspyException, ValidationError
 
 from gamspy_qubo import _utils
-from gamspy_qubo.backend import DwaveBackend
+from gamspy_qubo.backend import DwaveBackend, KipuBackend
 
 LOG_LEVEL_DICT = {0: log.WARN, 1: log.INFO, 2: log.DEBUG}
 SUPPORTED_QUANTUM_BACKENDS = [
-    "dwave"
+    "dwave",
+    "kipu",
 ]  # append this list when adding new quantum backend
 
 
@@ -655,13 +656,13 @@ class Qubo(gp.Model):
                 ) from e
             optimized_variable_values = self._q_container["x"].records
         elif self._backend in SUPPORTED_QUANTUM_BACKENDS:
-            _initialize = {"dwave": DwaveBackend}
-            _backend = _initialize[self._backend](
+            _initialize = {"dwave": DwaveBackend, "kipu": KipuBackend}
+            _backend: DwaveBackend | KipuBackend = _initialize[self._backend](
                 q_matrix=self.Q,
                 q_variables=self._q_container["qi"].records["uni"].tolist(),
                 q_constant=self.Qconst,
                 sense=self._sense,
-            )
+            )  # type: ignore
             try:
                 optimized_variable_values = _backend.solve(*args, **kwargs)
                 assert isinstance(optimized_variable_values, pd.DataFrame), (
