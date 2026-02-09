@@ -753,12 +753,16 @@ class Qubo(gp.Model):
             split_labels = group["domain"].str.split(",", expand=True)
             split_labels.columns = domain_names
 
+            attrs = ["level", "marginal", "lower", "upper", "scale"]
             new_records = pd.concat(
-                [split_labels, group[["level", "marginal", "lower", "upper", "scale"]]],
+                [split_labels, group[attrs]],
                 axis=1,
             )
-
-            new_records[domain_names] = new_records[domain_names].astype("category")
+            dtype_map = {
+                **{c: "category" for c in domain_names},
+                **{c: "float" for c in attrs},
+            }
+            new_records = new_records.astype(dtype_map)
             target_symbol.records = new_records.reset_index(drop=True)
 
         """
@@ -795,7 +799,12 @@ class Qubo(gp.Model):
             f"{self._modelName}_objective_variable"
         ]
         obj_var_coeff.l = total_objective_contribution
-        self._og_model.container[original_obj_sym].records = obj_var_coeff.records
+        super().__setattr__(
+            "_objective_value", total_objective_contribution
+        )  # sets the value for the attribute of QUBO model instance
+        self._og_model.container[
+            original_obj_sym
+        ].records = obj_var_coeff.records  # sets the value for original model instance
         self._MAPPING_COMPLETE = True
 
     @property
