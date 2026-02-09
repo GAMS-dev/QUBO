@@ -45,8 +45,8 @@ demo_model = gp.Model(
     objective=z,
 )
 
-q = Qubo(demo_model, penalty=10, backend="dwave")
-q.solve(num_reads=1000)
+q = Qubo(demo_model, penalty=10)
+q.solve(solver="dwave", num_reads=1000)
 
 print(f"Original Objective Variable:\n{demo_model._objective_variable.records}")
 print(f"Variable x:\n{x.records}")

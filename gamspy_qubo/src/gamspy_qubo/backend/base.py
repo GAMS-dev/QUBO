@@ -16,7 +16,7 @@ class baseBackend(ABC):
     def __init__(
         self,
         q_matrix: np.ndarray,
-        q_variables: list[str],
+        q_variables: pd.Series,
         q_constant: float | int,
         sense: Sense,
     ):
@@ -41,7 +41,7 @@ class baseBackend(ABC):
 
         Returns:
             A pandas.DataFrame that must have the following structure,
-            `columns = ["i", "level"]`, where `i` contains variable and
+            `columns = ["i", "level"]`, where `i` contains variables and
             `level` is the corresponding value of the variable after solving.
         """
         raise NotImplementedError

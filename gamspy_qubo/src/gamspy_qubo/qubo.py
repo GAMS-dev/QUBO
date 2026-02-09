@@ -654,10 +654,11 @@ class Qubo(gp.Model):
                 ) from e
             optimized_variable_values = self._q_container["x"].records
         elif self._backend in SUPPORTED_QUANTUM_BACKENDS:
+            q_vars: pd.Series = self._q_container["qi"].records["uni"]
             _initialize = {"dwave": DwaveBackend, "kipu": KipuBackend}
             _backend: DwaveBackend | KipuBackend = _initialize[self._backend](
                 q_matrix=self.Q,
-                q_variables=self._q_container["qi"].records["uni"].tolist(),
+                q_variables=q_vars,
                 q_constant=self.Qconst,
                 sense=self._sense,
             )  # type: ignore
@@ -667,6 +668,12 @@ class Qubo(gp.Model):
                     "backend.solve() must return a `pd.DataFrame`. "
                     "Refer to the return structue of `baseBackend.solve` for more details."
                 )
+                optimized_variable_values["i"] = pd.Categorical(
+                    optimized_variable_values["i"],
+                    categories=q_vars.cat.categories,
+                    ordered=True,
+                )  # NOTE: some solvers can shuffle the order of UELs, and
+                # it is critical for them to be in order for mapping them back
                 cols = ["marginal", "lower", "upper", "scale"]
                 optimized_variable_values = optimized_variable_values.reindex(
                     columns=optimized_variable_values.columns.tolist() + cols
@@ -679,7 +686,7 @@ class Qubo(gp.Model):
             raise GamspyException(f"Backend {self._backend} not supported.")
 
         solution = {
-            "optimized_vals": optimized_variable_values,
+            "optimized_vals": optimized_variable_values.sort_values("i"),
             "obj_fn_sym": original_obj_sym,
         }
         self._map_solution(solution)

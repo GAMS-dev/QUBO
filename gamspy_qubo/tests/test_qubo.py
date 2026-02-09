@@ -419,7 +419,6 @@ def test_qubo_with_dwave_solver(data):
     test_qubo = Qubo(test1, penalty=10)
     test_qubo.solve(solver="dwave")
 
-    print(f"{test_qubo.objective_value = }")
     assert 96 == test_qubo.objective_value, "Objective value is wrong."
     assert 96 == z.l.records.loc[0, "level"], "Mapped Objective value is wrong."
     assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
