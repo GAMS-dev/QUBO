@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from gamspy import SolveStatus
 
 
-def validate_value(value: int, allowed_values: list, param_name: str) -> int:
+def validate_value(value: int, allowed_values: list[int], param_name: str) -> int:
     if value not in allowed_values:
         raise ValueError(f"{param_name} must be one of {allowed_values}")
     return value
@@ -207,16 +207,15 @@ def triu(Q_matrix: np.ndarray):
 
 
 def check_classical_solve(solveStatus: SolveStatus | None):
-    assert solveStatus is not None, GamspyException(
-        "Solver status is None. Solve the model first."
-    )
+    if solveStatus is None:
+        raise GamspyException("Solver status is None. Solve the model first.")
 
-    if solveStatus.value in [2, 3, 8]:
+    if solveStatus in [SolveStatus.IterationInterrupt, SolveStatus.ResourceInterrupt, SolveStatus.UserInterrupt]:
         # Continue mapping incumbent solution if solve_status is one of
         # [UserInterrupt, ResourceInterrupt, IterationInterrupt].
         pass
 
-    elif solveStatus.value != 1:
+    elif solveStatus != SolveStatus.NormalCompletion:
         raise GamspyException(
             f"Solver did not yield NormalCompletion. Solver status = {solveStatus}"
         )

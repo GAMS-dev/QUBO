@@ -380,7 +380,7 @@ def test_qubo_with_integer_variable(data):
     test_qubo.solve()
 
     assert 96 == test_qubo.objective_value, "Objective value is wrong."
-    assert 96 == z.l.records.loc[0, "level"], "Mapped Objective value is wrong."
+    assert 96 == z.toValue(), "Mapped Objective value is wrong."
     assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
 
 
@@ -420,7 +420,7 @@ def test_qubo_with_dwave_solver(data):
     test_qubo.solve(solver="dwave")
 
     assert 96 == test_qubo.objective_value, "Objective value is wrong."
-    assert 96 == z.l.records.loc[0, "level"], "Mapped Objective value is wrong."
+    assert 96 == z.toValue(), "Mapped Objective value is wrong."
     assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
 
 
