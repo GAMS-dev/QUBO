@@ -19,7 +19,7 @@ def validate_value(value: int, allowed_values: list[int], param_name: str) -> in
 
 def check_row_entries(df: pd.DataFrame) -> pd.DataFrame:
     """
-    helper function to filter DataFrame having either 0 or 1 entries in each row.
+    Helper function to filter DataFrame having either 0 or 1 entries in each row.
     Args:
         df: A Pandas DataFrame.
 
@@ -32,7 +32,7 @@ def check_row_entries(df: pd.DataFrame) -> pd.DataFrame:
 
 def fetch_quadratic_coeff(raw_df: pd.DataFrame, bin_vars: list) -> np.ndarray:
     """
-    helper function to convert the original Q matrix of the problem to a symmetric matrix
+    Helper function to convert the original Q matrix of the problem to a symmetric matrix
 
     Args:
         raw_df: Original problem Q data in a pd.DataFrame
@@ -58,7 +58,7 @@ def var_contribution(
     A: pd.DataFrame, vars: dict, cons: list | None = None
 ) -> np.ndarray:
     """
-    helper function to calculate the contribution of given variables
+    Helper function to calculate the contribution of given variables
     in a constraint or set of constraints
 
     Args:
@@ -87,7 +87,7 @@ def modify_matrix(
     nslacks: int,
 ) -> tuple[np.ndarray, pd.DataFrame, int]:
     """
-    helper function to update the original "A" matrix of coeffs
+    Helper function to update the original "A" matrix of coeffs
 
     Args:
         b_vec: The n*1 vector
@@ -116,7 +116,11 @@ def modify_matrix(
 
 def gen_slacks(var_range: float) -> np.ndarray:
     """
-    helper function to generate slacks depending on the range of variables or rhs
+    Helper function to generate slacks depending on the range of variables or rhs.
+
+    Note: `var_range` cannot be more than 1e4. This hard limit prevents the creation of
+        excessive auxiliary binary variables and maintains model performance
+        during the binarization of slacks or integer variables.
 
     Args:
         var_range: upper bound of variable
@@ -140,7 +144,7 @@ def gen_slacks(var_range: float) -> np.ndarray:
 
 def get_lhs_bounds(ele: pd.DataFrame) -> tuple[float, float]:
     """
-    helper function to find the bounds of a constraint
+    Helper function to find the bounds of a constraint
 
     Args:
         ele: The coefficients of the constraint
@@ -210,7 +214,11 @@ def check_classical_solve(solveStatus: SolveStatus | None):
     if solveStatus is None:
         raise GamspyException("Solver status is None. Solve the model first.")
 
-    if solveStatus in [SolveStatus.IterationInterrupt, SolveStatus.ResourceInterrupt, SolveStatus.UserInterrupt]:
+    if solveStatus in [
+        SolveStatus.IterationInterrupt,
+        SolveStatus.ResourceInterrupt,
+        SolveStatus.UserInterrupt,
+    ]:
         # Continue mapping incumbent solution if solve_status is one of
         # [UserInterrupt, ResourceInterrupt, IterationInterrupt].
         pass
