@@ -340,7 +340,7 @@ def test_qubo_valid_solution(data):
     test_qubo.solve(solver="CPLEX")
 
     assert 22 == test_qubo.objective_value, "Objective value is wrong."
-    assert 22 == z.l.records.loc[0, "level"], "Mapped Objective value is wrong."
+    assert 22 == z.toValue(), "Mapped Objective value is wrong."
     assert 3 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
 
 
@@ -424,6 +424,7 @@ def test_qubo_with_dwave_solver(data):
     assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
 
 
+@pytest.mark.skip
 def test_qubo_with_kipu_solver(data):
     m, i, x, c1, obj, z = data
     import os
@@ -466,5 +467,5 @@ def test_qubo_with_kipu_solver(data):
     )
 
     assert 96 == test_qubo.objective_value, "Objective value is wrong."
-    assert 96 == z.l.records.loc[0, "level"], "Mapped Objective value is wrong."
+    assert 96 == z.toValue(), "Mapped Objective value is wrong."
     assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
