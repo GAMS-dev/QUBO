@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from gamspy import SolveStatus
 from gamspy.exceptions import GamspyException, ValidationError
-
-if TYPE_CHECKING:
-    from gamspy import SolveStatus
 
 
 def validate_value(value: int, allowed_values: list[int], param_name: str) -> int:
