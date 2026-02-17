@@ -2,71 +2,148 @@
 
 A QUBO, Quadratic Unconstrained Binary Optimization, is a type of optimization problem where the aim is to find the best combination of binary choices (0/1) to maximize or minimize a quadratic objective function. It involves no constraints except that the variables are binary.
 
-The QUBO model's significance in combinatorial optimization is heightened by its equivalence to the Ising model, which is prominent in physics. Consequently, the broad range of optimization problems solved effectively by state-ofthe-art QUBO solution methods are joined by an important domain of problems arising in physics applications.
+The QUBO model's significance in combinatorial optimization is heightened by its equivalence to the Ising model, which is prominent in physics. Consequently, the broad range of optimization problems solved effectively by state-of-the-art QUBO solution methods are joined by an important domain of problems arising in physics applications.
+
+**Note:** This repository contains two versions of the QUBO tool. The GAMS implementation is in the gams_qubo folder. The Python-based GAMSPy implementation is in the gamspy_qubo folder. The GAMSPy implementation will be the primary focus of all future updates and active maintenance.
 
 ## QUBO Reformulation
 
-The reformulation is derived from, A Tutorial on Formulating and Using QUBO Models. Glover, F., Kochenberger, G., & Du, Y. [2019](https://arxiv.org/abs/1811.11538). Following are some examples included to test the qubo reformulation.
+The reformulation is derived from, A Tutorial on Formulating and Using QUBO Models. Glover, F., Kochenberger, G., & Du, Y. [2019](https://arxiv.org/abs/1811.11538). 
 
-1. [setPacking.gms](./examples/setPacking.gms), Set Packing Problem (max)
-2. [O1program.gms](./examples/01program.gms), General 0/1 Problem (max)
-3. [QAP.gms](./examples/QAP.gms), Quadratic Assignment Problem (min)
-4. [setPartition.gms](./examples/setPartition.gms), Set Partitioning Problem (min)
-5. [QKP.gms](./examples/QKP.gms), Quadratic Knapsack Problem (max)
-6. [generalIP.gms](./examples/generalIP.gms), a general integer problem (max)
-7. [qplib_5881.gms](./examples/qplib_5881.gms), a flat/scalar gms file (max)
-8. [knights.gms](./examples/knights.gms), A Max problem from GAMS modlib
-9. [Q01.gms](./examples/Q01.gms), Quadratic 0/1 Problem (min)
-10. [flightGate.gms](./examples/flightGate.gms), Flight gate assignment Problem (min)
-11. [maxColorSubgraphs.gms](./examples/maxColorSubgraph.gms), Maximum colorable subgraph problem (min)
-12. [tsp.gms](./examples/tsp.gms), Traveling Salesman Problem (min)
+## Quickstart
 
+### 1. Clone the repository into your directory
 
-## Required Packages
+```bash
+git clone git@git.gams.com:devel/qubo.git
+cd qubo/gamspy_qubo
+```
 
-1. gamsapi[transfer], [link](https://www.gams.com/latest/docs/API_PY_GETTING_STARTED.html#PY_PIP_INSTALL_BDIST)
-2. dwave-system, required when solving on [Dwave's](https://docs.ocean.dwavesys.com/projects/system/en/latest/installation.html) Hybrid QPU otherwise optional.
+### 2. Install and Project Setup
+
+This project uses `uv` for environment management. You can install the base package or include specific dependency groups for development or quantum backend access.
+
+**Base installation:**
+
+```bash
+uv sync
+```
+
+**Installing specific dependency groups:**
+You can include optional groups using the `--group` flag:
+
+* **dev**: Tools for testing and linting (mypy, ruff, pytest, etc.).
+* **dwave**: Includes `dwave-ocean-sdk` for solving on D-Wave hardware.
+* **kipu**: Includes `planqk-service-sdk` for Kipu Quantum integration.
+
+```bash
+# Example: Install with dev and dwave support
+uv sync --group dev --group dwave
+```
+
+#### Fallback method (using `requirements.txt`) if you are not using uv:
+
+**macOS / Linux:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+**Windows:**
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+Then, install using requirements.txt:
+
+```bash
+pip install -r requirements.txt
+```
+
+This will not install the dependencies for the quantum backends.
+
+## Project Structure
+
+```
+gamspy_qubo/
+├── src/
+│   └── gamspy_qubo/
+│       ├── __init__.py
+│       └── qubo.py
+├── examples/
+│   └── ...
+├── tests/
+│   └── ...
+├── pyproject.toml
+├── requirements.txt
+├── README.md
+└── .gitignore
+```
+
+## Using the Package
+
+Once installed, you can use it like:
+
+```python
+from gamspy_qubo import Qubo
+```
+
+Or run example scripts:
+
+```bash
+uv run examples/qap.py
+```
+
+## Examples
+Following are some examples included to test the QUBO reformulation.
+
+1. [setPacking.py](./examples/setPacking.py), Set Packing Problem (max)
+2. [O1program.py](./examples/01program.py), General 0/1 Problem (max)
+3. [QAP.py](./examples/QAP.py), Quadratic Assignment Problem (min)
+4. [setPartition.py](./examples/setPartition.py), Set Partitioning Problem (min)
+5. [QKP.py](./examples/QKP.py), Quadratic Knapsack Problem (max)
+6. [generalIP.py](./examples/generalIP.py), a general integer problem (max)
+7. [qplib_5881.py](./examples/qplib_5881.py), a flat/scalar py file (max)
+8. [knights.py](./examples/knights.py), A Max problem from GAMS modlib
+9. [Q01.py](./examples/Q01.py), Quadratic 0/1 Problem (min)
+10. [flightGate.py](./examples/flightGate.py), Flight gate assignment Problem (min)
+11. [maxColorSubgraphs.py](./examples/maxColorSubgraph.py), Maximum colorable subgraph problem (min)
+12. [tsp.py](./examples/tsp.py), Traveling Salesman Problem (min)
+
 
 ## Input
 
-Once the problem is defined, it can be solved through the qubo reformulation by including the `qubo_solve.gms` using $batinclude.
-The `qubo_solve.gms` file should be in the same location where the main gms file is located. If not, the location of the file must be specified by either including it in the $batinclude statement, for e.g., `$batinclude 'location\of\the\file\qubo_solve.gms'` or by setting the command line parameter, `-IDIR`.
+Once your GAMSPy problem is defined and a `gp.Model` object is instantiated, you can solve it through the QUBO reformulation by wrapping your model in the `Qubo` class. 
 
-The `qubo_solve.gms` requires the following 5 positional arguments. Since they are positional arguments they must be in the exact order as mentioned below.
+```python
+from gamspy_qubo import Qubo
 
-1. modelName
-2. modelType
-3. objective (max/min)
-4. objectiveVariable
-5. Penalty factor for the constraints
+# 1. Wrap your existing GAMSPy model
+qubo_model = Qubo(
+    model=demo_model,  # Your gp.Model instance
+    name="QUBO",       # (Optional) Name for the reformulated model
+    penalty=10,        # (Optional) Penalty factor for constraints (default: 1)
+)
 
-Following is the list of optional `-key=val` pair arguments, some of which are method specific.
+# 2. Solve the QUBO model
+# By default, solver="cplex". You can also specify quantum backends.
+q.solve(solver="dwave", num_reads=1000)
 
-6. method, [qpu, classic] (default: classic)
-7. solver, choice of miqcp solver (default: cplex | effective only if `-method=classic`).
-8. maxIter, Number of times the problem is solved on the QPU (default: 1 | effective only if `-method=qpu`)
-9. timeLimit, Time limit for 1 iteration on QPU or TimeLimit for a classical solve (default: 10)
-10. numThreads, Number of threads to be used in case of a classical solve (default: min(8,num_of_cores) | effective only if `-method=classic`)
-11. logOn, Creates a log for the reformulation [0, 1, 2] (default: 0, don't create a log)
-12. examinerOn, [0, 1] (default: 0) The quality of returned qubo solution w.r.t the original problem can be checked through the use of `examiner` [tool](https://www.gams.com/latest/docs/S_EXAMINER.html).
-13. getQ, [y, n] (default: n) Specify if only the Q-matrix is exported to a CSV file. This will produce a CSV file with the following filename schema, `modelName_p(penalty)_c(total_offset).csv`
+```
+*(Note: Generating the API key and setting up the required python environments for `dwave` or `kipu` must be done prior to using them as a solver backend).*
 
-Note: Generating the API key and setting up the Python-Dwave Environment is considered to be available when chosen method of solving is `qpu`.
+### Keyword Arguments for `.solve()`
 
-## How to run
+* **`solver`**: Choice of solver backend. Supported classical solvers are standard GAMSPy MIQCP solvers (default: `"cplex"`). Supported quantum backends sofar are `"dwave"` and `"kipu"`.
+* **`**kwargs`**: Any additional backend-specific arguments. For example, if using `"dwave"`, you can pass arguments like `num_reads=1000`. If using a classic solver, arguments are passed natively to GAMSPy's solve method.
 
-- Download GAMS from https://www.gams.com/download/
-- Install GAMS
-- Run the main gms file with the desired options by including them in the main file through the `$batinclude` statement. For e.g., `$batinclude qubo_solve.gms setPacking MIP max z 6 -solver=cplex -timeLimit=60 -numThreads=2 -logOn=2`
-  - from GAMS Studio: Open the main problem file in GAMS studio. If qubo_solve.gms is not in the same directory as the main problem file, enter `-IDIR=<path//to//qubo_solve.gms>` in the [parameter editor](https://www.gams.com/latest/docs/T_STUDIO.html#STUDIO_TOOLBAR) and hit the run button (or press F9)
-  - from the command line
-    ```
-    gams '.\QAP.gms' -IDIR=<path//to//qubo_solve.gms>
-    ```
 
 ## Output
 
-The script generates two gdx files. One for the standard problem which is saved as `modelName.gdx` and another for the reformulted model, saved as `qout_modeName.gdx`. A successful run will then return the level of binary variables and the objective variable.
+The GAMSPy integration automatically translates the QUBO solution back to your problem's original scope. Upon a successful run, your initial model variables are directly populated with the new levels. 
 
 ## Limitations
 
@@ -79,15 +156,25 @@ Note: In order to binarize the right hand side of each constraint, the reformula
 5. Although the objective function can have quadratic terms, the constraints cannot have any quadratic terms. This is due to the penalization step. The step requires the constraint to be squared which results in a polynomial of degree greater than 2. This becomes a problem with 3 or more interacting variables. For example, $(xy + yz)^2 = (xy)^2 + (yz)^2 + 2xy^2z$. Here, the term $2xy^2z$ is problematic since it cannot be reduced to bilinear terms.
 6. The reformulation expects the objective function to be defined via the use of a scalar equation, i.e., the symbol `iobj` must be nonzero in the gdx file created by [Convert](https://www.gams.com/latest/docs/S_CONVERT.html).
 
-The reformulation will throw appropriate exceptions if the limitations are not statisfied.
-
-## Testing
-
-The file `test_qubo_solve.gms` tests the correctness of qubo_solve in certain scenarios. The test file should be in the same location as `qubo_solve.gms`. There is a test for checking the correctness of the reformulation and solution obtained from the Dwave QPU. This is not enabled by default. In order to enable this test one should run the file with the command line option `--TESTDWAVE=yes`. It follows that the required python packages are already present in the python environment defined by `GMSPYTHONLIB`.
+The reformulation will throw appropriate exceptions if the limitations are not satisfied.
 
 ## Choosing the right Penalty
 
 A penalty value that is too large can impede the solution process as the penalty terms overwhelm the original objective function information, making it difficult to distinguish the quality of one solution from another. On the other hand, a penalty value that is too small jeopardizes the search for feasible solutions. Generally, there is a ‘Goldilocks region’ of considerable size that contains penalty values that work well. A little preliminary thought about the model can yield a ballpark estimate of the original objective function value. Taking P to be some percentage (75% to 150%) of this estimate is often a good place to start. In the end, solutions generated can always be checked for feasibility, leading to changes in penalties and further rounds of the solution process as needed to zero in on an acceptable solution.
+
+
+## Run Tests
+
+There are tests available that can be run using the `pytest` package. You can install it via,
+
+```bash
+pip install -e .[dev]
+```
+The tests can then be run via `pytest test_qubo.py`
+
+## GAMS Version
+
+The original tool was developed for the GAMS modeling language. While this repository now focuses on the GAMSPy (Python) implementation, the classic GAMS version remains available in the GAMS subfolder.
 
 ## Acknowledgments
 The QUBO reformulation tool has been developed under the financial support of:
