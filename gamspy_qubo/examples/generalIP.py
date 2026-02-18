@@ -1,4 +1,5 @@
 import gamspy as gp
+
 from gamspy_qubo import Qubo
 
 m = gp.Container()
@@ -12,6 +13,7 @@ cost = gp.Parameter(
 x = gp.Variable(m, name="x", type="integer", domain=i)
 
 x.up[i] = 9
+x.fx["b3"] = 5
 
 y = gp.Variable(m, name="y", type="binary", domain=i)
 
@@ -44,8 +46,7 @@ demo_model = gp.Model(
 )
 
 q = Qubo(demo_model, penalty=10)
-
-q.solve(solver="CPLEX")
+q.solve(solver="dwave", num_reads=1000)
 
 print(f"Original Objective Variable:\n{demo_model._objective_variable.records}")
 print(f"Variable x:\n{x.records}")

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import gamspy as gp
 import numpy as np
 import pytest
-
-import gamspy as gp
 from gamspy import Container
-from gamspy_qubo import Qubo
-
 from gamspy.exceptions import ValidationError
+
+from gamspy_qubo import Qubo
 
 
 @pytest.fixture
@@ -341,7 +340,7 @@ def test_qubo_valid_solution(data):
     test_qubo.solve(solver="CPLEX")
 
     assert 22 == test_qubo.objective_value, "Objective value is wrong."
-    assert 22 == z.l.records.loc[0, "level"], "Mapped Objective value is wrong."
+    assert 22 == z.toValue(), "Mapped Objective value is wrong."
     assert 3 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
 
 
@@ -378,8 +377,95 @@ def test_qubo_with_integer_variable(data):
     )
 
     test_qubo = Qubo(test1, penalty=10)
-    test_qubo.solve(solver="CPLEX")
+    test_qubo.solve()
 
     assert 96 == test_qubo.objective_value, "Objective value is wrong."
-    assert 96 == z.l.records.loc[0, "level"], "Mapped Objective value is wrong."
+    assert 96 == z.toValue(), "Mapped Objective value is wrong."
+    assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
+
+
+def test_qubo_with_dwave_solver(data):
+    m, i, x, c1, obj, z = data
+
+    x = gp.Variable(m, "x_int", domain=[i], type="integer")
+    x.up[...] = 4
+    x.fx[3] = 2
+
+    np.random.seed(42)
+    cost = gp.Parameter(
+        m,
+        "cost",
+        domain=[i],
+        records=[(i, np.random.randint(1, 10)) for i in range(1, 6)],
+    )
+
+    obj[...] = gp.Sum(i, cost[i] * x[i]) == z
+
+    c1[...] = gp.Sum(i, x[i]) <= 15
+    c2 = gp.Equation(m, "c2")
+
+    # special constraint
+    c2[...] = x[1] + x[2] >= 1
+
+    test1 = gp.Model(
+        m,
+        name="test1",
+        problem="MIP",
+        equations=[c1, c2, obj],
+        sense=gp.Sense.MAX,
+        objective=z,
+    )
+
+    test_qubo = Qubo(test1, penalty=10)
+    test_qubo.solve(solver="dwave")
+
+    assert 96 == test_qubo.objective_value, "Objective value is wrong."
+    assert 96 == z.toValue(), "Mapped Objective value is wrong."
+    assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
+
+
+@pytest.mark.skip
+def test_qubo_with_kipu_solver(data):
+    m, i, x, c1, obj, z = data
+    import os
+
+    ACCESS_KEY_ID = os.environ["PLANQ_APP_ACCESS_KEY_ID"]
+    SECRET_ACCESS_KEY = os.environ["PLANQ_APP_SECRET_ACCESS_KEY"]
+
+    x = gp.Variable(m, "x_int", domain=[i], type="integer")
+    x.up[...] = 4
+    x.fx[3] = 2
+
+    np.random.seed(42)
+    cost = gp.Parameter(
+        m,
+        "cost",
+        domain=[i],
+        records=[(i, np.random.randint(1, 10)) for i in range(1, 6)],
+    )
+
+    obj[...] = gp.Sum(i, cost[i] * x[i]) == z
+
+    c1[...] = gp.Sum(i, x[i]) <= 15
+    c2 = gp.Equation(m, "c2")
+
+    # special constraint
+    c2[...] = x[1] + x[2] >= 1
+
+    test1 = gp.Model(
+        m,
+        name="test1",
+        problem="MIP",
+        equations=[c1, c2, obj],
+        sense=gp.Sense.MAX,
+        objective=z,
+    )
+
+    test_qubo = Qubo(test1, penalty=10)
+    test_qubo.solve(
+        solver="kipu", secret_access_key=SECRET_ACCESS_KEY, access_key_id=ACCESS_KEY_ID
+    )
+
+    assert 96 == test_qubo.objective_value, "Objective value is wrong."
+    assert 96 == z.toValue(), "Mapped Objective value is wrong."
     assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import gamspy as gp
 import random as rp
+
+import gamspy as gp
+
 from gamspy_qubo import Qubo
 
 rp.seed(42)
