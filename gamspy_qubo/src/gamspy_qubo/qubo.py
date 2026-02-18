@@ -34,7 +34,7 @@ class Qubo(gp.Model):
 
     Notes
     -----
-    - Currenty two quantum solvers, ("dwave", "kipu"), are supported.
+    - Currently two quantum solvers, ("dwave", "kipu"), are supported.
     - The desired quantum solver can be set using the `solver` keyword argument in the `model.solve()` call. (default = "cplex")
     - We first use the `CONVERT` solver to generate a standardized version of the original problem.
     - One can also pass keyword arguments to the `CONVERT` solver, for. e.g., `options=gp.Options(hold_fixed_variables=True)`
