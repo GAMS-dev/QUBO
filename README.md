@@ -40,6 +40,7 @@ You can include optional groups using the `--group` flag:
 # Example: Install with dev and dwave support
 uv sync --group dev --group dwave
 ```
+You can also install all dependencies at once with `uv sync --all-group`.
 
 #### Fallback method (using `requirements.txt`) if you are not using uv:
 
@@ -162,15 +163,14 @@ The reformulation will throw appropriate exceptions if the limitations are not s
 
 A penalty value that is too large can impede the solution process as the penalty terms overwhelm the original objective function information, making it difficult to distinguish the quality of one solution from another. On the other hand, a penalty value that is too small jeopardizes the search for feasible solutions. Generally, there is a ‘Goldilocks region’ of considerable size that contains penalty values that work well. A little preliminary thought about the model can yield a ballpark estimate of the original objective function value. Taking P to be some percentage (75% to 150%) of this estimate is often a good place to start. In the end, solutions generated can always be checked for feasibility, leading to changes in penalties and further rounds of the solution process as needed to zero in on an acceptable solution.
 
-
 ## Run Tests
 
 There are tests available that can be run using the `pytest` package. You can install it via,
 
 ```bash
-pip install -e .[dev]
+uv sync --group dev
 ```
-The tests can then be run via `pytest test_qubo.py`
+The tests can then be run via `pytest tests\test_qubo.py`
 
 ## GAMS Version
 
