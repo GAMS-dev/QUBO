@@ -61,7 +61,7 @@ class KipuBackend(baseBackend):
         ut_mat *= multiplier
         problem = {}
         rows, cols = ut_mat.nonzero()
-        for i, j in zip(rows, cols):
+        for i, j in zip(rows, cols, strict=True):
             if i == j:
                 problem[f"({i},)"] = ut_mat[i, j]  # diagonal terms
             else:
