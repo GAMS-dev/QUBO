@@ -6,12 +6,13 @@ import pandas as pd
 from gamspy.exceptions import GamspyException, ValidationError
 
 from gamspy_qubo import _utils
-from gamspy_qubo.backend import DwaveBackend, KipuBackend
+from gamspy_qubo.backend import DwaveBackend, JsonBackend, KipuBackend
 
 LOG_LEVEL_DICT = {0: log.WARN, 1: log.INFO, 2: log.DEBUG}
 SUPPORTED_QUANTUM_BACKENDS = [
     "dwave",
     "kipu",
+    "json",
 ]  # append this list when adding new quantum backend
 
 
@@ -595,7 +596,7 @@ class Qubo(gp.Model):
         non_zero_values = self.Q[non_zero_indices]
         with open(f"QMat_{self._modelName}.qs", "w") as fp:
             fp.write(f"{self.Q.shape[0]} {len(non_zero_values)} {self.Qconst}\n")
-            for i, j, value in zip(*non_zero_indices, non_zero_values):
+            for i, j, value in zip(*non_zero_indices, non_zero_values, strict=True):
                 if value != 0:
                     fp.write(f"{i + 1} {j + 1} {value}\n")
 
@@ -655,8 +656,14 @@ class Qubo(gp.Model):
             optimized_variable_values = self._q_container["x"].records
         elif self._backend in SUPPORTED_QUANTUM_BACKENDS:
             q_vars: pd.Series = self._q_container["qi"].records["uni"]
-            _initialize = {"dwave": DwaveBackend, "kipu": KipuBackend}
-            _backend: DwaveBackend | KipuBackend = _initialize[self._backend](
+            _initialize = {
+                "dwave": DwaveBackend,
+                "kipu": KipuBackend,
+                "json": JsonBackend,
+            }
+            _backend: DwaveBackend | KipuBackend | JsonBackend = _initialize[
+                self._backend
+            ](
                 q_matrix=self.Q,
                 q_variables=q_vars,
                 q_constant=self.Qconst,

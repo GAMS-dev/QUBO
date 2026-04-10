@@ -172,6 +172,9 @@ uv sync --group dev
 ```
 The tests can then be run via `pytest tests\test_qubo.py`
 
+## Utility
+For integrating external solvers not natively supported by GAMSPy, you can export the formulated Q matrix and pass the resulting solution vector back as a JSON file with the json "backend". The package will then automatically map this external binary solution to your original model variables.
+
 ## GAMS Version
 
 The original tool was developed for the GAMS modeling language. While this repository now focuses on the GAMSPy (Python) implementation, the classic GAMS version remains available in the GAMS subfolder.

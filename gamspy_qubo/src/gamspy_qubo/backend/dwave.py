@@ -34,7 +34,7 @@ class DwaveBackend(baseBackend):
         ut_mat *= multiplier
         matrix_dict = {}
         rows, cols = ut_mat.nonzero()
-        for i, j in zip(rows, cols):
+        for i, j in zip(rows, cols, strict=True):
             matrix_dict[(self.q_variables[i], self.q_variables[j])] = ut_mat[i, j]
 
         dimod = importlib.import_module("dimod")
