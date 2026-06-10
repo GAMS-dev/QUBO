@@ -21,7 +21,8 @@ class JsonBackend(baseBackend):
         # q_variables holds the QUBO binary indices (e.g., 'b1', 'b2')
         for var in self.q_variables:
             # Match the variable name to the JSON keys, defaulting to 0.0 if not found
-            val = sol_dict.get(var, 0.0)
+            json_key = var.replace("b", "x", 1)
+            val = sol_dict.get(json_key, 0.0)
             results.append({"i": var, "level": float(val)})
 
         df = pd.DataFrame(results)
