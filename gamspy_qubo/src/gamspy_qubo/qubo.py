@@ -190,7 +190,7 @@ class Qubo(gp.Model):
 
         self._obj_eq_name = obj_eq_name["i"].to_list()
 
-        check_quad = self._container["ANL"].records
+        check_quad = self._container["ANl"].records
 
         """
         Check if there are any fixed variables in the gdx, i.e., lb=ub=level of any variable.
