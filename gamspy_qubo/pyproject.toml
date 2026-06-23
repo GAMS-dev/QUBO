@@ -12,7 +12,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-  "gamspy >= 1.19.3",
+  "gamspy == 1.23.0",
   "pydantic >= 2.12.5",
 ]
 
