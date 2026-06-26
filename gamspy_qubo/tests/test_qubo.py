@@ -469,3 +469,47 @@ def test_qubo_with_kipu_solver(data):
     assert 96 == test_qubo.objective_value, "Objective value is wrong."
     assert 96 == z.toValue(), "Mapped Objective value is wrong."
     assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
+
+
+@pytest.mark.skip
+def test_qubo_with_fixstars_solver(data):
+    m, i, x, c1, obj, z = data
+    import os
+
+    TOKEN = os.environ["FIXSTAR_AMPLIFY_AE_TOKEN"]
+
+    x = gp.Variable(m, "x_int", domain=[i], type="integer")
+    x.up[...] = 4
+    x.fx[3] = 2
+
+    np.random.seed(42)
+    cost = gp.Parameter(
+        m,
+        "cost",
+        domain=[i],
+        records=[(i, np.random.randint(1, 10)) for i in range(1, 6)],
+    )
+
+    obj[...] = gp.Sum(i, cost[i] * x[i]) == z
+
+    c1[...] = gp.Sum(i, x[i]) <= 15
+    c2 = gp.Equation(m, "c2")
+
+    # special constraint
+    c2[...] = x[1] + x[2] >= 1
+
+    test1 = gp.Model(
+        m,
+        name="test1",
+        problem="MIP",
+        equations=[c1, c2, obj],
+        sense=gp.Sense.MAX,
+        objective=z,
+    )
+
+    test_qubo = Qubo(test1, penalty=10)
+    test_qubo.solve(solver="fixstars", token=TOKEN)
+
+    assert 96 == test_qubo.objective_value, "Objective value is wrong."
+    assert 96 == z.toValue(), "Mapped Objective value is wrong."
+    assert 15 == sum(x.toDense().flatten()), "Variable Assignment is wrong."
