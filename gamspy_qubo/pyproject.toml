@@ -101,3 +101,6 @@ dwave = [
 kipu = [
   "planqk-service-sdk",
 ]
+fixstars = [
+  "amplify",
+]
