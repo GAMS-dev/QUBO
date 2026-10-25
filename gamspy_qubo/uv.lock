@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -9,10 +9,10 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version < '3.11'",
 ]
@@ -632,21 +632,21 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "authlib", marker = "python_full_version < '3.11'" },
-    { name = "click", marker = "python_full_version < '3.11'" },
-    { name = "diskcache", marker = "python_full_version < '3.11'" },
-    { name = "homebase", marker = "python_full_version < '3.11'" },
-    { name = "http-sf", marker = "python_full_version < '3.11'" },
-    { name = "importlib-metadata", marker = "python_full_version < '3.11'" },
-    { name = "orjson", marker = "python_full_version < '3.11'" },
-    { name = "packaging", marker = "python_full_version < '3.11'" },
-    { name = "plucky", marker = "python_full_version < '3.11'" },
-    { name = "pydantic", marker = "python_full_version < '3.11'" },
-    { name = "python-dateutil", marker = "python_full_version < '3.11'" },
-    { name = "requests", extra = ["socks"], marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
-    { name = "urllib3", marker = "python_full_version < '3.11'" },
-    { name = "werkzeug", marker = "python_full_version < '3.11'" },
+    { name = "authlib" },
+    { name = "click" },
+    { name = "diskcache" },
+    { name = "homebase" },
+    { name = "http-sf" },
+    { name = "importlib-metadata" },
+    { name = "orjson" },
+    { name = "packaging" },
+    { name = "plucky" },
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+    { name = "requests", extra = ["socks"] },
+    { name = "typing-extensions" },
+    { name = "urllib3" },
+    { name = "werkzeug" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/84/b2/222780d36f8fe9944577d73aaa4c06465fa51671f29acca8ed5884d163cf/dwave_cloud_client-0.14.6.tar.gz", hash = "sha256:3120e498d7879a596576936a0958694ad431ae60f25df864fff3378645509fa3", size = 207511, upload-time = "2026-06-16T13:31:56.402Z" }
 wheels = [
@@ -665,28 +665,28 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "authlib", marker = "python_full_version >= '3.11'" },
-    { name = "click", marker = "python_full_version >= '3.11'" },
-    { name = "diskcache", marker = "python_full_version >= '3.11'" },
-    { name = "homebase", marker = "python_full_version >= '3.11'" },
-    { name = "http-sf", marker = "python_full_version >= '3.11'" },
-    { name = "importlib-metadata", marker = "python_full_version >= '3.11'" },
-    { name = "orjson", marker = "python_full_version >= '3.11'" },
-    { name = "packaging", marker = "python_full_version >= '3.11'" },
-    { name = "plucky", marker = "python_full_version >= '3.11'" },
-    { name = "pydantic", marker = "python_full_version >= '3.11'" },
-    { name = "python-dateutil", marker = "python_full_version >= '3.11'" },
-    { name = "requests", extra = ["socks"], marker = "python_full_version >= '3.11'" },
-    { name = "typing-extensions", marker = "python_full_version >= '3.11'" },
-    { name = "urllib3", marker = "python_full_version >= '3.11'" },
-    { name = "werkzeug", marker = "python_full_version >= '3.11'" },
+    { name = "authlib" },
+    { name = "click" },
+    { name = "diskcache" },
+    { name = "homebase" },
+    { name = "http-sf" },
+    { name = "importlib-metadata" },
+    { name = "orjson" },
+    { name = "packaging" },
+    { name = "plucky" },
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+    { name = "requests", extra = ["socks"] },
+    { name = "typing-extensions" },
+    { name = "urllib3" },
+    { name = "werkzeug" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/88/30ce96d93636515102003537b5565c78f266c9acea50c3af4d69c49fd6c0/dwave_cloud_client-0.14.8.tar.gz", hash = "sha256:82cbd8dc90f513d460cbc390a22268d1b646162088f057393893533388f0e926", size = 208454, upload-time = "2026-09-15T18:01:19.495Z" }
 wheels = [
@@ -701,7 +701,7 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/54/1f/d91986a2fddf4c0ea03177a25a1c80a8cb8d86165e084b5fc70b7c2a4a0a/dwave_gate-0.3.5.tar.gz", hash = "sha256:e638af54bc0dc98e212ce35b629a91b2d69c3282fba33db64554f8d6e80fd168", size = 366648, upload-time = "2025-11-19T22:28:51.928Z" }
 wheels = [
@@ -744,20 +744,20 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "addict", marker = "python_full_version >= '3.11'" },
-    { name = "dwave-cloud-client", version = "0.14.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "addict" },
+    { name = "dwave-cloud-client", version = "0.14.8", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "orjson", marker = "python_full_version >= '3.11'" },
-    { name = "polars", marker = "python_full_version >= '3.11'" },
-    { name = "pydantic", marker = "python_full_version >= '3.11'" },
+    { name = "orjson" },
+    { name = "polars" },
+    { name = "pydantic" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/67/64/53391082de36e8a2d575c5331ccc15cad45ea08b919b0d3bb3854069a90b/dwave_gate-0.6.0.tar.gz", hash = "sha256:37973ae748ab85c9e2cf4514f6570eb53ea3a60c7c59c7a472c43c0d7b78f2ec", size = 114087, upload-time = "2026-09-15T18:40:14.387Z" }
 wheels = [
@@ -772,9 +772,9 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "dimod", marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "dimod" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cc/fb/2b6fdb4a36f0dde5640d5ce3ef033f459cb3c143f825e0cb01c04f7b58a0/dwave_graphs-1.0.0.tar.gz", hash = "sha256:f38313eb5e0363c0b9cf8a871ce54121368d97205f993e29b1fd5fb6b3194b0b", size = 92934, upload-time = "2026-06-11T17:53:17.461Z" }
 wheels = [
@@ -793,17 +793,17 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "dimod", marker = "python_full_version >= '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "dimod" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "networkx", version = "3.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4f/03/ef7e9bef73167a161ef331d84d26dbe6a918b827c18a716bc5e7275aa30d/dwave_graphs-1.1.0.tar.gz", hash = "sha256:3a20666ddaa9fe5f140d55cd98cc18bdc77820c7b7a66b3abedd3566dbdac6ed", size = 111046, upload-time = "2026-09-15T15:26:08.177Z" }
@@ -887,19 +887,19 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "dimod", marker = "python_full_version < '3.11'" },
-    { name = "dwave-cloud-client", version = "0.14.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "dwave-gate", version = "0.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "dwave-graphs", version = "1.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "dwave-hybrid", marker = "python_full_version < '3.11'" },
-    { name = "dwave-inspector", marker = "python_full_version < '3.11'" },
-    { name = "dwave-networkx", marker = "python_full_version < '3.11'" },
-    { name = "dwave-optimization", version = "0.7.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "dwave-preprocessing", marker = "python_full_version < '3.11'" },
-    { name = "dwave-samplers", marker = "python_full_version < '3.11'" },
-    { name = "dwave-system", version = "1.35.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "minorminer", marker = "python_full_version < '3.11'" },
-    { name = "penaltymodel", marker = "python_full_version < '3.11'" },
+    { name = "dimod" },
+    { name = "dwave-cloud-client", version = "0.14.6", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-gate", version = "0.3.5", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-graphs", version = "1.0.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-hybrid" },
+    { name = "dwave-inspector" },
+    { name = "dwave-networkx" },
+    { name = "dwave-optimization", version = "0.7.1", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-preprocessing" },
+    { name = "dwave-samplers" },
+    { name = "dwave-system", version = "1.35.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "minorminer" },
+    { name = "penaltymodel" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0f/c0/45f1407485ecbb0ac4a68663ee18fafd9fa7bd7f4d7eefd8134ccb2cc2de/dwave_ocean_sdk-9.4.0.tar.gz", hash = "sha256:aab1c2ab9b4dc82ec293553b93cb71c162b2183a02287c63a5db99dfd378f997", size = 8652, upload-time = "2026-06-18T16:49:42.772Z" }
 wheels = [
@@ -918,26 +918,26 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "dimod", marker = "python_full_version >= '3.11'" },
-    { name = "dwave-cloud-client", version = "0.14.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "dwave-gate", version = "0.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "dwave-graphs", version = "1.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "dwave-hybrid", marker = "python_full_version >= '3.11'" },
-    { name = "dwave-inspector", marker = "python_full_version >= '3.11'" },
-    { name = "dwave-networkx", marker = "python_full_version >= '3.11'" },
-    { name = "dwave-optimization", version = "0.7.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "dwave-preprocessing", marker = "python_full_version >= '3.11'" },
-    { name = "dwave-samplers", marker = "python_full_version >= '3.11'" },
-    { name = "dwave-system", version = "1.36.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "minorminer", marker = "python_full_version >= '3.11'" },
-    { name = "penaltymodel", marker = "python_full_version >= '3.11'" },
+    { name = "dimod" },
+    { name = "dwave-cloud-client", version = "0.14.8", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-gate", version = "0.6.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-graphs", version = "1.1.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-hybrid" },
+    { name = "dwave-inspector" },
+    { name = "dwave-networkx" },
+    { name = "dwave-optimization", version = "0.7.3", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-preprocessing" },
+    { name = "dwave-samplers" },
+    { name = "dwave-system", version = "1.36.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "minorminer" },
+    { name = "penaltymodel" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/ea/0f44828eb15a60166e5512dac3194276124eb700f0d6b27f83254e611f63/dwave_ocean_sdk-9.5.0.tar.gz", hash = "sha256:e78f34d94d4cd5b35a8b3cd6a92c0ba50ea5830b5acfdec5ce4354657afb9074", size = 8771, upload-time = "2026-09-15T23:04:42.113Z" }
 wheels = [
@@ -952,7 +952,7 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/64/c4/647b830f662e0851a32285c443898d01f23fd087f6326e606736d86924bd/dwave_optimization-0.7.1.tar.gz", hash = "sha256:70085ae160b7692225392650924f137bc2c74f405d1a45d4e011aa647cb3ec03", size = 520638, upload-time = "2026-06-05T21:27:44.98Z" }
 wheels = [
@@ -990,14 +990,14 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6f/3a/74fc56d952b1549acac8920f02d8b3f7c34a3901829e891f4bed8ceb4bde/dwave_optimization-0.7.3.tar.gz", hash = "sha256:2a610790c1a329bdc85e0db0c8d6e625f660969cd1f66cfd43a37d5b6f25fa7e", size = 549273, upload-time = "2026-08-17T22:48:18.496Z" }
@@ -1118,17 +1118,17 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "dimod", marker = "python_full_version < '3.11'" },
-    { name = "dwave-cloud-client", version = "0.14.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "dwave-graphs", version = "1.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "dwave-optimization", version = "0.7.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "dwave-preprocessing", marker = "python_full_version < '3.11'" },
-    { name = "dwave-samplers", marker = "python_full_version < '3.11'" },
-    { name = "homebase", marker = "python_full_version < '3.11'" },
-    { name = "minorminer", marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "dimod" },
+    { name = "dwave-cloud-client", version = "0.14.6", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-graphs", version = "1.0.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-optimization", version = "0.7.1", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-preprocessing" },
+    { name = "dwave-samplers" },
+    { name = "homebase" },
+    { name = "minorminer" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/75/c7/4719eddb936f30576f458106e31c057f01e38bee1475ae11421bb4730d06/dwave_system-1.35.0.tar.gz", hash = "sha256:0c11cdbcd64e344824a42b46479d37d84f4529210208b0820e6cd29b2994f367", size = 135893, upload-time = "2026-06-17T17:28:05.091Z" }
 wheels = [
@@ -1147,26 +1147,26 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "dimod", marker = "python_full_version >= '3.11'" },
-    { name = "dwave-cloud-client", version = "0.14.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "dwave-graphs", version = "1.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "dwave-optimization", version = "0.7.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "dwave-preprocessing", marker = "python_full_version >= '3.11'" },
-    { name = "dwave-samplers", marker = "python_full_version >= '3.11'" },
-    { name = "homebase", marker = "python_full_version >= '3.11'" },
-    { name = "minorminer", marker = "python_full_version >= '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "dimod" },
+    { name = "dwave-cloud-client", version = "0.14.8", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-graphs", version = "1.1.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-optimization", version = "0.7.3", source = { registry = "https://pypi.org/simple" } },
+    { name = "dwave-preprocessing" },
+    { name = "dwave-samplers" },
+    { name = "homebase" },
+    { name = "minorminer" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "networkx", version = "3.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/01/ef/69c8c85eab7e8e8997f1c10effcb90995954a2491a724295089b0516d8af/dwave_system-1.36.0.tar.gz", hash = "sha256:e1b978b1fcac316e1b5b30ef4e5da337dd01a2347527d17e075ee09d3a76b9aa", size = 136031, upload-time = "2026-08-28T21:27:44.261Z" }
@@ -1179,7 +1179,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -2265,10 +2265,10 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "python-dateutil", marker = "python_full_version < '3.11'" },
-    { name = "pytz", marker = "python_full_version < '3.11'" },
-    { name = "tzdata", marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
+    { name = "python-dateutil" },
+    { name = "pytz" },
+    { name = "tzdata" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/33/01/d40b85317f86cf08d853a4f495195c73815fdf205eef3993821720274518/pandas-2.3.3.tar.gz", hash = "sha256:e05e1af93b977f7eafa636d043f9f94c7ee3ac81af99c13508215942e64c993b", size = 4495223, upload-time = "2025-09-29T23:34:51.853Z" }
 wheels = [
@@ -2333,17 +2333,17 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "python-dateutil", marker = "python_full_version >= '3.11'" },
-    { name = "tzdata", marker = "(python_full_version >= '3.11' and sys_platform == 'emscripten') or (python_full_version >= '3.11' and sys_platform == 'win32')" },
+    { name = "python-dateutil" },
+    { name = "tzdata", marker = "sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e2/17/d7b106e05bfa642e8694451e7d3d759c6a241c5386a5d962e4f66c047e06/pandas-3.0.6.tar.gz", hash = "sha256:66b07ef7315a31bfe1089cd3d71a7de781c9dca986762d0b4fe7c0ef17465d10", size = 4667686, upload-time = "2026-09-17T23:23:18.345Z" }
 wheels = [
@@ -2414,8 +2414,8 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "types-pytz", marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
+    { name = "types-pytz" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/92/5d/be23854a73fda69f1dbdda7bc10fbd6f930bd1fa87aaec389f00c901c1e8/pandas_stubs-2.3.3.260113.tar.gz", hash = "sha256:076e3724bcaa73de78932b012ec64b3010463d377fa63116f4e6850643d93800", size = 116131, upload-time = "2026-01-13T22:30:16.704Z" }
 wheels = [
@@ -2434,14 +2434,14 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c1/93/8948ae6c1e1e3d6833596fd266f7be2d27c1451b8be094975ad42c5e842e/pandas_stubs-3.0.5.260914.tar.gz", hash = "sha256:3f6fc1f147f68fd89c007105e7c94a948acb4ecd7eb20dc1c02e153c4ed5c250", size = 117622, upload-time = "2026-09-14T16:42:35.065Z" }
@@ -2526,7 +2526,7 @@ name = "polars"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "polars-runtime-32", marker = "python_full_version >= '3.11'" },
+    { name = "polars-runtime-32" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8e/e9/001f371ec6a1bb54893f599ceebd56e6144fed4091f09f09fec0021a9276/polars-2.0.0.tar.gz", hash = "sha256:62da109e27a19a9d36657ee25dc035c9d3f87e7bd610526fe467dc37ea7dc115", size = 778215, upload-time = "2026-10-06T11:51:29.679Z" }
 wheels = [
@@ -2913,7 +2913,7 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0f/37/6964b830433e654ec7485e45a00fc9a27cf868d622838f6b6d9c5ec0d532/scipy-1.15.3.tar.gz", hash = "sha256:eae3cf522bc7df64b42cad3925c876e1b0b6c35c1337c93e12c0f366f55b0eaf", size = 59419214, upload-time = "2025-05-08T16:13:05.955Z" }
 wheels = [
@@ -2974,7 +2974,7 @@ resolution-markers = [
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7a/97/5a3609c4f8d58b039179648e62dd220f89864f56f7357f5d4f45c29eb2cc/scipy-1.17.1.tar.gz", hash = "sha256:95d8e012d8cb8816c226aef832200b1d45109ed4464303e997c5b13122b297c0", size = 30573822, upload-time = "2026-02-23T00:26:24.851Z" }
 wheels = [
@@ -3056,7 +3056,7 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7e/74/66de6258867beb2ef08f35f9f2ac017a52cacd5081714d239ff1a442d458/scipy-1.18.1.tar.gz", hash = "sha256:52c4b7422442aba924d03ad4019852b08a92e64ea187b933135687bfe2747307", size = 30781235, upload-time = "2026-08-21T23:28:50.599Z" }
 wheels = [
@@ -3280,7 +3280,7 @@ wheels = [
 
 [[package]]
 name = "virtualenv"
-version = "21.14.5"
+version = "21.14.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "distlib" },
@@ -3290,9 +3290,9 @@ dependencies = [
     { name = "python-discovery" },
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c4/f9/f323b3b6058cff3853b31cf6a49c0425ed797bf9611572ec10d065e08bac/virtualenv-21.14.5.tar.gz", hash = "sha256:c4cb6c13e46b57225a999c7e22a09b163393878facc7ac4c059a57f46faa1647", size = 5467127, upload-time = "2026-10-02T17:42:25.613Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/70/aa/bff50daee0488e16d611258a9b6c5a1d0c9e128f8ca424e9f4e1c0444ef2/virtualenv-21.14.13.tar.gz", hash = "sha256:de5307ba4b9a0001d9c8ea02832d38f63ca432880f416c1bface61c4323fd905", size = 5570301, upload-time = "2026-10-22T20:10:16.952Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/93/084f10ebbecdedf7902ed68fbecc903f0e9c5742155bfffb05eccbc071da/virtualenv-21.14.5-py3-none-any.whl", hash = "sha256:b0651e0174982bba17cc6f0aaa2ef496730cb85a3f35eb5d1119d1c904f7d1da", size = 5487482, upload-time = "2026-10-02T17:42:23.38Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/a9/c10d8a44a29fb94a18b43fdf11f38caca53ae7c9406f11a72b1cb8f624f1/virtualenv-21.14.13-py3-none-any.whl", hash = "sha256:5fbb04138a4861580b78ba9110d529a26bc48fcc93c8ec36bc0202eeed96a788", size = 5557094, upload-time = "2026-10-22T20:10:15.096Z" },
 ]
 
 [[package]]
